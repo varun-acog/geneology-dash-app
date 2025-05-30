@@ -9,86 +9,12 @@ from Lineage import get_item_codes
 from dash.exceptions import PreventUpdate
 from Lineage import get_lineage
 
-# Generate dummy data for the table
-np.random.seed(42)
-n_rows = 50
-
-dummy_data = {
-    'ParentItemCode': [f'CT17{i:02d}' for i in range(1, n_rows + 1)],
-    'ParentName': [f'CT17{i}-1780' for i in range(1, n_rows + 1)],
-    'ParentPN': [f'CT17{i}-1780' for i in range(1, n_rows + 1)],
-    'Level': np.random.choice([3, 4, 5], n_rows),
-    'ProductItemCode': [f'PT17{i:02d}' for i in range(100, 100 + n_rows)],
-    'ProductName': [f'PT17{i}-1780' for i in range(100, 100 + n_rows)],
-    'ProductPN': [f'PT17{i}-1780' for i in range(100, 100 + n_rows)],
-    'IngredientItemCode': [f'CT1{i:02d}' for i in range(200, 200 + n_rows)],
-    'IngredientName': [f'CT1N-{i:04d}' for i in range(1780, 1780 + n_rows)]
-}
-
-df = pd.DataFrame(dummy_data)
-
-# Generate dummy network data for visualization
-network_nodes = []
-network_edges = []
-
-# Create nodes
-for i in range(20):
-    network_nodes.append({
-        'id': f'node_{i}',
-        'label': f'Item {i}',
-        'x': np.random.uniform(-2, 2),
-        'y': np.random.uniform(-2, 2),
-        'size': np.random.uniform(10, 30)
-    })
-
-# Create edges
-for i in range(15):
-    source = np.random.randint(0, 10)
-    target = np.random.randint(10, 20)
-    network_edges.append({
-        'source': source,
-        'target': target
-    })
-
+# Function to create a network visualization graph (currently using static data)
 def create_network_graph():
     """Create a network visualization graph"""
     fig = go.Figure()
     
-    # Add edges
-    edge_x = []
-    edge_y = []
-    for edge in network_edges:
-        source_node = network_nodes[edge['source']]
-        target_node = network_nodes[edge['target']]
-        edge_x.extend([source_node['x'], target_node['x'], None])
-        edge_y.extend([source_node['y'], target_node['y'], None])
-    
-    fig.add_trace(go.Scatter(
-        x=edge_x, y=edge_y,
-        line=dict(width=1, color='#888'),
-        hoverinfo='none',
-        mode='lines'
-    ))
-    
-    # Add nodes
-    node_x = [node['x'] for node in network_nodes]
-    node_y = [node['y'] for node in network_nodes]
-    node_text = [node['label'] for node in network_nodes]
-    
-    fig.add_trace(go.Scatter(
-        x=node_x, y=node_y,
-        mode='markers+text',
-        text=node_text,
-        textposition="middle center",
-        textfont=dict(size=10, color='#ffffff'),
-        hoverinfo='text',
-        marker=dict(
-            size=[node['size'] for node in network_nodes],
-            color='#4682b4',
-            line=dict(width=2, color='#2f4f4f')
-        )
-    ))
-    
+    # Placeholder for network visualization (can be updated later to use real data)
     fig.update_layout(
         showlegend=False,
         hovermode='closest',
@@ -346,13 +272,12 @@ app.layout = html.Div([
                 dag.AgGrid(
                     id='data-table',
                     columnDefs=columnDefs,
-                    rowData=df.to_dict('records'),
+                    rowData=[],  # Set initial rowData to empty list to hide table
                     defaultColDef=defaultColDef,
                     style={'height': '400px', 'width': '100%'},
                     dashGridOptions={
                         "pagination": True,
                         "paginationPageSize": 20,
-                        # Removed domLayout="autoHeight" to fix pagination
                     },
                     className="ag-theme-alpine"
                 )
@@ -424,7 +349,7 @@ def update_multi_options(search_value, value):
 def update_table(n_clicks, from_val, to_val):
     # Only process if Submit button was clicked and at least one value is provided
     if not n_clicks or (not from_val and not to_val):
-        return df.to_dict('records')  # Return dummy data if no submission
+        return []  # Return empty list to keep table hidden if no submission
     
     try:
         # Prepare parameters for get_lineage function
@@ -476,11 +401,13 @@ def update_table(n_clicks, from_val, to_val):
                 mapped_data.append(mapped_row)
             
             return mapped_data
-        else[ res.to_dict('records')  # Return dummy data if no results
+        else:
+            print("No data returned from database")
+            return []  # Return empty list to keep table hidden if no results
             
     except Exception as e:
         print(f"Error getting lineage data: {e}")
-        return df.to_dict('records')  # Return dummy data on error
+        return []  # Return empty list on error to keep table hidden
 
 # Callback for Clear button
 @app.callback(
@@ -492,7 +419,7 @@ def update_table(n_clicks, from_val, to_val):
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, df.to_dict('records')  # Reset to dummy data
+        return None, None, []  # Reset to empty list to hide table
     return dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
