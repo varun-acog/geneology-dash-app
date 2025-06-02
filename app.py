@@ -407,9 +407,13 @@ app.layout = html.Div([
         html.Div([
             html.Div([
                 html.H4("Visualization", style=styles['sectionTitle']),
-                # Export button in a separate div, aligned to the right
+                # Export button with a note
                 html.Div([
-                    html.Button("Export", style=styles['exportButton'])
+                    html.Button("Export", style=styles['exportButton']),
+                    html.Span(
+                        " (Note: Use the download icon in the chart toolbar to export as PNG)",
+                        style={'fontSize': '12px', 'color': '#666', 'marginLeft': '10px'}
+                    )
                 ], style={'textAlign': 'right', 'marginBottom': '10px'}),
                 # ECharts tree chart
                 DashECharts(
@@ -491,7 +495,6 @@ def update_tree_chart(data):
     df = pd.DataFrame(data)
     
     # Map columns to match csv_to_hierarchy expectations
-    # Now including root_parentlot as the root
     hierarchy_data = pd.DataFrame({
         'root': df['ParentItemCode'],  # root_parentlot
         'source': df['ProductItemCode'],  # startnode
@@ -511,42 +514,73 @@ def update_tree_chart(data):
     # Generate the hierarchical JSON
     tree_data = csv_to_hierarchy(hierarchy_data)
 
-    # ECharts tree chart configuration
+    # ECharts tree chart configuration with improvements
     option = {
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
             "formatter": "{b}<br/>{c.description}<br/>Level: {c.level}"
         },
+        "toolbox": {
+            "show": True,
+            "feature": {
+                "restore": {"show": True},
+                "saveAsImage": {"show": True, "title": "Download as PNG", "name": "genealogy_tree"}
+            }
+        },
         "series": [
             {
                 "type": "tree",
                 "data": [tree_data],
-                "top": "1%",
-                "left": "7%",
-                "bottom": "1%",
-                "right": "20%",
-                "symbolSize": 7,
+                "top": "5%",  # Increased spacing
+                "left": "10%",
+                "bottom": "5%",
+                "right": "15%",
+                "symbolSize": 10,  # Larger nodes for better visibility
                 "label": {
                     "position": "left",
                     "verticalAlign": "middle",
                     "align": "right",
-                    "fontSize": 9
+                    "fontSize": 12,  # Larger font for readability
+                    "distance": 10  # Space between node and label
                 },
                 "leaves": {
                     "label": {
                         "position": "right",
                         "verticalAlign": "middle",
-                        "align": "left"
+                        "align": "left",
+                        "fontSize": 12
                     }
                 },
                 "emphasis": {
-                    "focus": "descendant"
+                    "focus": "descendant",  # Focus on the clicked node and its descendants
+                    "blurScope": "coordinateSystem"  # Dim other nodes when focusing
                 },
-                "expandAndCollapse": True,
+                "expandAndCollapse": True,  # Allow collapsing/expanding branches
+                "initialTreeDepth": 1,  # Show only the first level initially to reduce clutter
                 "animationDuration": 550,
                 "animationDurationUpdate": 750,
-                "initialTreeDepth": 2  # Limit initial depth for better visibility
+                "roam": True,  # Enable zooming and panning
+                "lineStyle": {
+                    "width": 2,  # Thicker lines for better visibility
+                    "curveness": 0.5  # Curved lines to reduce overlap
+                }
+            }
+        ],
+        "dataZoom": [
+            {
+                "type": "inside",  # Enable zoom with mouse wheel
+                "zoomOnMouseWheel": True,
+                "moveOnMouseMove": True,  # Enable panning
+                "start": 0,
+                "end": 100
+            },
+            {
+                "type": "slider",  # Add a zoom slider for manual control
+                "show": True,
+                "realtime": True,
+                "start": 0,
+                "end": 100
             }
         ]
     }
