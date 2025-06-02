@@ -1,6 +1,6 @@
 import dash
 from dash import dcc, html, Input, Output, callback, State, clientside_callback
-from dash_echarts import EChart  # Import EChart component
+from dash_echarts import DashECharts  # Updated import
 import dash_ag_grid as dag
 import plotly.graph_objects as go
 import plotly.express as px
@@ -417,7 +417,7 @@ app.layout = html.Div([
                     html.Button("Export", style=styles['exportButton'])
                 ], style={'textAlign': 'right', 'marginBottom': '10px'}),
                 # ECharts tree chart
-                EChart(
+                DashECharts(
                     id='tree-chart',
                     option={},
                     style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
