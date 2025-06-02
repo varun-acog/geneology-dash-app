@@ -245,3 +245,5 @@ Database result: shape: (98, 6)
 │ Trc  ┆ Z1303-20111    ┆ P72810-20119  ┆ P2216-20104   ┆ 2     ┆ 1       │
 └──────┴────────────────┴───────────────┴───────────────┴───────┴─────────┘
 Columns: ['type', 'root_parentlot', 'startnode', 'endnode', 'Level', 'CntRecs']
+
+Property "data adhered to the hierarchy" was used with component ID: "all-data-store" in one of the Output items of a callback. This ID is assigned to a dash_core_components.Store component in the layout, which does not support this property. This ID was used in the callback(s) for Output(s): data-table.rowData, all-data-store.data adhered to the hierarchy
