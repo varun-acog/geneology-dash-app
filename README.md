@@ -247,3 +247,18 @@ Database result: shape: (98, 6)
 Columns: ['type', 'root_parentlot', 'startnode', 'endnode', 'Level', 'CntRecs']
 
 Property "data adhered to the hierarchy" was used with component ID: "all-data-store" in one of the Output items of a callback. This ID is assigned to a dash_core_components.Store component in the layout, which does not support this property. This ID was used in the callback(s) for Output(s): data-table.rowData, all-data-store.data adhered to the hierarchy
+
+File "/home/users/pr912591/Lineage/Lineage/app2.py", line 504, in update_tree_chart
+tree_data = csv_to_hierarchy(hierarchy_data)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/users/pr912591/Lineage/Lineage/app2.py", line 143, in csv_to_hierarchy
+build_tree(root_name, tree)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/users/pr912591/Lineage/Lineage/app2.py", line 140, in build_tree
+build_tree(child_id, child_node)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/users/pr912591/Lineage/Lineage/app2.py", line 140, in build_tree
+build_tree(child_id, child_node)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/users/pr912591/Lineage/Lineage/app2.py", line 140, in build_tree
+build_tree(child_id, child_node)
