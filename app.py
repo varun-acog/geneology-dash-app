@@ -232,8 +232,34 @@ app.layout = html.Div([
                 ])
             ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px'}),
             
-            # Right side - Data Required
+            # Right side - Additional Filters and Data Required
             html.Div([
+                # Additional Filters (Unit Operation and Attribute)
+                html.Div([
+                    html.H4("Additional Filters", style=styles['sectionTitle']),
+                    html.Div([
+                        html.Div([
+                            dcc.Dropdown(
+                                id='unit-operation-dropdown',
+                                multi=True,
+                                clearable=True,
+                                placeholder='Unit Operation',
+                                style=styles['dropdown']
+                            )
+                        ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%'}),
+                        html.Div([
+                            dcc.Dropdown(
+                                id='attribute-dropdown',
+                                multi=True,
+                                clearable=True,
+                                placeholder='Attribute',
+                                style=styles['dropdown'],
+                                options=[]  # Keep Attribute dropdown empty as requested
+                            )
+                        ], style={'width': '48%', 'display': 'inline-block'})
+                    ], style={'marginBottom': '15px'}),
+                ]),
+                
                 # Data Required
                 html.Div([
                     html.H4("Data Required", style=styles['sectionTitle']),
@@ -253,7 +279,7 @@ app.layout = html.Div([
                             inputStyle=styles['checkbox']
                         )
                     ])
-                ], style={'width': '65%', 'display': 'inline-block', 'verticalAlign': 'top'})
+                ])
             ], style={'width': '65%', 'display': 'inline-block', 'verticalAlign': 'top'})
         ], style=styles['section']),
         
@@ -305,6 +331,31 @@ app.layout = html.Div([
         ], style=styles['section'])
     ], style=styles['container'])
 ])
+
+# Callback to populate Unit Operation dropdown with unique ProductItemCode and IngredientItemCode values
+@app.callback(
+    Output('unit-operation-dropdown', 'options'),
+    Input('all-data-store', 'data'),
+    prevent_initial_call=True
+)
+def update_unit_operation_options(data):
+    if not data:
+        return []
+    
+    # Convert the list of dictionaries to a DataFrame
+    df = pd.DataFrame(data)
+    
+    # Extract unique values from ProductItemCode and IngredientItemCode
+    product_item_codes = df['ProductItemCode'].dropna().unique()
+    ingredient_item_codes = df['IngredientItemCode'].dropna().unique()
+    
+    # Combine and get unique values
+    all_item_codes = set(product_item_codes).union(set(ingredient_item_codes))
+    
+    # Convert to dropdown options format
+    options = [{'label': str(code), 'value': str(code)} for code in sorted(all_item_codes)]
+    
+    return options
 
 @callback(
     Output("from-dropdown", "options"),
@@ -533,14 +584,16 @@ def export_filtered_data(timestamp, filtered_data):
      Output('to-dropdown', 'value'),
      Output('data-table', 'rowData', allow_duplicate=True),
      Output('all-data-store', 'data', allow_duplicate=True),
-     Output('filtered-data-store', 'data', allow_duplicate=True)],
+     Output('filtered-data-store', 'data', allow_duplicate=True),
+     Output('unit-operation-dropdown', 'value'),
+     Output('attribute-dropdown', 'value')],
     [Input('clear-button', 'n_clicks')],
     prevent_initial_call=True
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], [], []  # Reset everything to empty
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, None, [], [], [], None, None  # Reset everything to empty
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True)
