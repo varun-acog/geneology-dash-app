@@ -1,6 +1,6 @@
 import dash
 from dash import dcc, html, Input, Output, callback, State, clientside_callback
-from dash_echarts import DashECharts  # Updated import based on previous troubleshooting
+from dash_echarts import DashECharts  # Using the correct import as previously resolved
 import dash_ag_grid as dag
 import plotly.graph_objects as go
 import plotly.express as px
@@ -568,7 +568,7 @@ def update_multi_options(search_value, value):
 # Callback for interactive filtering - triggered by Submit button
 @app.callback(
     [Output('data-table', 'rowData'),
-     Output('all-data-store', 'data adhered to the hierarchy')],
+     Output('all-data-store', 'data')],  # Fixed property name
     [Input('submit-button', 'n_clicks')],
     [State('from-dropdown', 'value'),
      State('to-dropdown', 'value'),
