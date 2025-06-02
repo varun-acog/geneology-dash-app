@@ -425,20 +425,20 @@ clientside_callback(
                 if (!filterModel.hasOwnProperty(column)) continue;
 
                 const filter = filterModel[column];
-                const rowValue = row[column] ? row[column].toString().toLowerCase() : '';
-                const filterValue = filter.filter ? filter.filter.toLowerCase() : '';
+                const rowValue = row[column] != null ? row[column].toString() : '';
 
-                // Currently supporting "contains" filter type (as defined in columnDefs)
+                // Handle "contains" filter type for text columns
                 if (filter.type === 'contains') {
-                    if (!rowValue.includes(filterValue)) {
+                    const filterValue = filter.filter != null ? filter.filter.toString().toLowerCase() : '';
+                    if (!rowValue.toLowerCase().includes(filterValue)) {
                         passesFilter = false;
                         break;
                     }
                 }
-                // Add support for "equals" filter type for numeric columns (e.g., Level, CntRecs)
+                // Handle "equals" filter type for numeric columns
                 else if (filter.type === 'equals') {
                     const rowNum = parseFloat(rowValue);
-                    const filterNum = parseFloat(filterValue);
+                    const filterNum = parseFloat(filter.filter);
                     if (isNaN(rowNum) || rowNum !== filterNum) {
                         passesFilter = false;
                         break;
