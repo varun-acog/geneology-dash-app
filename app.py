@@ -402,11 +402,12 @@ clientside_callback(
     """
     function(filterModel, rowData) {
         console.log('Filter model changed:', filterModel);
-        console.log('Row data length:', rowData ? rowData.length : 'No data');
+        console.log('Row data:', rowData);
 
+        // If rowData is undefined, null, or empty, return no_update
         if (!rowData || rowData.length === 0) {
-            console.log('No row data available, returning empty array');
-            return [];
+            console.log('No row data available, skipping filter processing');
+            return window.dash_clientside.no_update;
         }
 
         // If no filters are applied, return all data
@@ -434,6 +435,15 @@ clientside_callback(
                         break;
                     }
                 }
+                // Add support for "equals" filter type for numeric columns (e.g., Level, CntRecs)
+                else if (filter.type === 'equals') {
+                    const rowNum = parseFloat(rowValue);
+                    const filterNum = parseFloat(filterValue);
+                    if (isNaN(rowNum) || rowNum !== filterNum) {
+                        passesFilter = false;
+                        break;
+                    }
+                }
             }
 
             return passesFilter;
@@ -452,17 +462,24 @@ clientside_callback(
 # Clientside callback to trigger the server-side download callback
 clientside_callback(
     """
-    function(n_clicks) {
+    function(n_clicks, filteredData) {
         if (!n_clicks || n_clicks <= 0) {
+            console.log('Export button not clicked, skipping');
             return window.dash_clientside.no_update;
         }
 
-        console.log('Export filtered button clicked, triggering download...');
+        if (!filteredData || filteredData.length === 0) {
+            console.log('No filtered data available to export, skipping');
+            return window.dash_clientside.no_update;
+        }
+
+        console.log('Export filtered button clicked, triggering download with', filteredData.length, 'rows');
         return n_clicks;
     }
     """,
     Output('filtered-data-store', 'modified_timestamp'),
-    Input('export-filtered-button', 'n_clicks'),
+    [Input('export-filtered-button', 'n_clicks'),
+     State('filtered-data-store', 'data')],
     prevent_initial_call=True
 )
 
