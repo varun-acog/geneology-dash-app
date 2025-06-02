@@ -1,3 +1,1 @@
-create the dynamic filters on right side on top
-      - Unit Operation - dropdown -> fill in using product itemcode and ingredinent item code unique values.
-	  - Attribute -> keep it as empty
+Create hirearchical data structure using csv_to_hirearchy function -> use the json output to render echarts tree chart on visualization
