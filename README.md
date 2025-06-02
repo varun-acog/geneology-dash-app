@@ -194,3 +194,23 @@ Traceback (most recent call last):
     from dash_echarts import EChart  # Import EChart component
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ModuleNotFoundError: No module named 'dash_echarts'
+
+(geneology) [pr912591@hpcapps Lineage]$ pip show dash-echarts
+Name: dash-echarts
+Version: 0.0.12.9
+Summary: echarts for dash
+Home-page: UNKNOWN
+Author: dameng
+Author-email: <pingf0@gmail.com>
+License: MIT
+Location: /bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages
+Requires: dash
+Required-by: 
+(geneology) [pr912591@hpcapps Lineage]$ python app2.py
+Traceback (most recent call last):
+  File "/home/users/pr912591/Lineage/Lineage/app2.py", line 3, in <module>
+    from dash_echarts import EChart  # Import EChart component
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ImportError: cannot import name 'EChart' from 'dash_echarts' (/bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages/dash_echarts/__init__.py)
+(geneology) [pr912591@hpcapps Lineage]$ 
+
