@@ -399,79 +399,43 @@ def update_table(n_clicks, from_val, to_val):
         print(f"Error getting lineage data: {e}")
         return [], []  # Return empty list on error to keep table hidden
 
-# Improved clientside callback to capture filtered data from AG Grid
+# Simplified clientside callback to capture filtered data from AG Grid
 clientside_callback(
     """
     function(n_clicks, tableData) {
         if (!n_clicks || n_clicks <= 0 || !tableData || tableData.length === 0) {
             return window.dash_clientside.no_update;
         }
-        
-        // Wait a bit for the grid to be ready
-        setTimeout(function() {
-            try {
-                // Try multiple methods to find the AG Grid API
-                let gridApi = null;
-                
-                // Method 1: Direct access via element property
-                const gridElement = document.querySelector('#data-table');
-                if (gridElement && gridElement._dashAgGrid && gridElement._dashAgGrid.api) {
-                    gridApi = gridElement._dashAgGrid.api;
+
+        // Access the AG Grid API directly
+        const gridElement = document.querySelector('#data-table');
+        if (gridElement && gridElement.__gridApi) {
+            const gridApi = gridElement.__gridApi;
+            
+            // Get filtered and sorted data
+            const filteredData = [];
+            gridApi.forEachNodeAfterFilterAndSort(function(node) {
+                if (node.data) {
+                    filteredData.push(node.data);
                 }
-                
-                // Method 2: Search through child elements
-                if (!gridApi && gridElement) {
-                    const gridContainer = gridElement.querySelector('.ag-root-wrapper');
-                    if (gridContainer && gridContainer.__agGridReact && gridContainer.__agGridReact.api) {
-                        gridApi = gridContainer.__agGridReact.api;
-                    }
-                }
-                
-                // Method 3: Global search for AG Grid instances
-                if (!gridApi && window.agGrid && window.agGrid.gridOptionsMap) {
-                    const gridIds = Object.keys(window.agGrid.gridOptionsMap);
-                    if (gridIds.length > 0) {
-                        const firstGridOptions = window.agGrid.gridOptionsMap[gridIds[0]];
-                        if (firstGridOptions && firstGridOptions.api) {
-                            gridApi = firstGridOptions.api;
-                        }
-                    }
-                }
-                
-                if (gridApi) {
-                    const filteredData = [];
-                    gridApi.forEachNodeAfterFilterAndSort(function(node) {
-                        if (node.data) {
-                            filteredData.push(node.data);
-                        }
-                    });
-                    
-                    console.log('Filtered data captured:', filteredData.length, 'rows');
-                    
-                    // Store the filtered data in a way that can be accessed by the server
-                    if (filteredData.length > 0) {
-                        // Trigger the download by updating a store or directly calling download
-                        window.dash_clientside.set_props('filtered-data-store', {data: filteredData});
-                        return filteredData;
-                    } else {
-                        console.log('No filtered data found, using all table data');
-                        window.dash_clientside.set_props('filtered-data-store', {data: tableData});
-                        return tableData;
-                    }
-                } else {
-                    console.log('Grid API not found, using all table data as fallback');
-                    window.dash_clientside.set_props('filtered-data-store', {data: tableData});
-                    return tableData;
-                }
-            } catch (error) {
-                console.error('Error in clientside callback:', error);
-                console.log('Using all table data as fallback due to error');
+            });
+
+            console.log('Filtered data captured:', filteredData.length, 'rows');
+
+            // If filtered data exists, store it; otherwise, use the full dataset
+            if (filteredData.length > 0) {
+                window.dash_clientside.set_props('filtered-data-store', {data: filteredData});
+                return filteredData;
+            } else {
+                console.log('No filtered data found, using all table data');
                 window.dash_clientside.set_props('filtered-data-store', {data: tableData});
                 return tableData;
             }
-        }, 100);
-        
-        return window.dash_clientside.no_update;
+        } else {
+            console.log('Grid API not found, using all table data as fallback');
+            window.dash_clientside.set_props('filtered-data-store', {data: tableData});
+            return tableData;
+        }
     }
     """,
     Output('filtered-data-store', 'data'),
