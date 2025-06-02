@@ -1,6 +1,6 @@
 import dash
 from dash import dcc, html, Input, Output, callback, State, clientside_callback
-from dash_echarts import DashECharts  # Using the correct import as previously resolved
+from dash_echarts import DashECharts
 import dash_ag_grid as dag
 import plotly.graph_objects as go
 import plotly.express as px
@@ -26,7 +26,7 @@ def create_network_graph():
     )
     return fig
 
-# Modified csv_to_hierarchy function to handle root_parentlot as the root
+# Modified csv_to_hierarchy function to handle root_parentlot as the root and prevent cycles
 def csv_to_hierarchy(csv_data):
     # Dictionary to track nodes with their metadata
     node_info = {}
@@ -122,8 +122,16 @@ def csv_to_hierarchy(csv_data):
             parent_to_children[parent] = []
         parent_to_children[parent].append(child)
 
-    # Helper function to recursively build the tree
-    def build_tree(node_id, parent_node):
+    # Helper function to recursively build the tree with cycle detection
+    def build_tree(node_id, parent_node, visited=None):
+        if visited is None:
+            visited = set()  # Initialize visited set on first call
+        
+        if node_id in visited:
+            return  # Skip if node has already been visited (cycle detected)
+        
+        visited.add(node_id)  # Mark the current node as visited
+        
         if node_id in parent_to_children:
             for child_id in parent_to_children[node_id]:
                 child_node = {
@@ -137,7 +145,7 @@ def csv_to_hierarchy(csv_data):
                     "Quantity": node_info[child_id]["Quantity"]
                 }
                 parent_node["children"].append(child_node)
-                build_tree(child_id, child_node)
+                build_tree(child_id, child_node, visited)  # Recursive call with visited set
 
     # Start building from the root
     build_tree(root_name, tree)
@@ -568,7 +576,7 @@ def update_multi_options(search_value, value):
 # Callback for interactive filtering - triggered by Submit button
 @app.callback(
     [Output('data-table', 'rowData'),
-     Output('all-data-store', 'data')],  # Fixed property name
+     Output('all-data-store', 'data')],
     [Input('submit-button', 'n_clicks')],
     [State('from-dropdown', 'value'),
      State('to-dropdown', 'value'),
