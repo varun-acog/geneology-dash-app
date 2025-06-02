@@ -214,3 +214,34 @@ Traceback (most recent call last):
 ImportError: cannot import name 'EChart' from 'dash_echarts' (/bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages/dash_echarts/__init__.py)
 (geneology) [pr912591@hpcapps Lineage]$ 
 
+- root_parentlot -> Parent Item Code
+	- root_parentlot -> Parent Name
+	- root_parentlot -> Parent PN
+	- startnode -> Product Item Code
+	- startnode -> Product Name
+	- startnode -> Product PN
+	- level -> level
+	- endnode -> Ingredient Item Code
+	- endnode -> Ingredient Name
+	- endnode -> Ingredient PN
+	- CntRecs -> CntRecs
+
+Database result: shape: (98, 6)
+┌──────┬────────────────┬───────────────┬───────────────┬───────┬─────────┐
+│ type ┆ root_parentlot ┆ startnode     ┆ endnode       ┆ Level ┆ CntRecs │
+│ ---  ┆ ---            ┆ ---           ┆ ---           ┆ ---   ┆ ---     │
+│ str  ┆ str            ┆ str           ┆ str           ┆ i32   ┆ i64     │
+╞══════╪════════════════╪═══════════════╪═══════════════╪═══════╪═════════╡
+│ Trc  ┆ Z1303-20111    ┆ P12003A-20127 ┆ P72810-20127  ┆ 3     ┆ 22      │
+│ Trc  ┆ Z1303-20111    ┆ BOXJ25A       ┆ P12003A-20119 ┆ 4     ┆ 19      │
+│ Trc  ┆ Z1303-20111    ┆ BOXK27A       ┆ P12003A-20122 ┆ 4     ┆ 24      │
+│ Trc  ┆ Z1303-20112    ┆ P2202-20118   ┆ P2201-20118   ┆ 2     ┆ 1       │
+│ Trc  ┆ Z1303-20111    ┆ BOXJ24A       ┆ P12003A-20120 ┆ 4     ┆ 23      │
+│ …    ┆ …              ┆ …             ┆ …             ┆ …     ┆ …       │
+│ Trc  ┆ Z1303-20112    ┆ V241205       ┆ BOXF14B       ┆ 5     ┆ 1       │
+│ Trc  ┆ Z1303-20111    ┆ P1601-20247   ┆ Z1303-20111   ┆ 1     ┆ 1       │
+│ Trc  ┆ Z1303-20112    ┆ V241206       ┆ BOXF14B       ┆ 4     ┆ 1       │
+│ Trc  ┆ Z1303-20112    ┆ P2201-20118   ┆ Z1303-20112   ┆ 1     ┆ 1       │
+│ Trc  ┆ Z1303-20111    ┆ P72810-20119  ┆ P2216-20104   ┆ 2     ┆ 1       │
+└──────┴────────────────┴───────────────┴───────────────┴───────┴─────────┘
+Columns: ['type', 'root_parentlot', 'startnode', 'endnode', 'Level', 'CntRecs']
