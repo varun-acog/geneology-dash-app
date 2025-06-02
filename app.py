@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 import numpy as np
+import json
 from Lineage import get_item_codes
 from dash.exceptions import PreventUpdate
 from Lineage import get_lineage
@@ -163,6 +164,14 @@ defaultColDef = {
 
 # Define the layout
 app.layout = html.Div([
+    # Download components for file exports
+    dcc.Download(id="download-all-data"),
+    dcc.Download(id="download-filtered-data"),
+    
+    # Store components for data management
+    dcc.Store(id="all-data-store"),
+    dcc.Store(id="filtered-data-store"),
+    
     # Main container
     html.Div([
         # Header
@@ -279,7 +288,12 @@ app.layout = html.Div([
                         "pagination": True,
                         "paginationPageSize": 20,
                     },
-                    className="ag-theme-alpine"
+                    className="ag-theme-alpine",
+                    # Enable CSV export
+                    enableEnterpriseModules=False,  # Use community features
+                    csvExportParams={
+                        "fileName": "genealogy_data.csv",
+                    }
                 )
             ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
             
@@ -287,37 +301,12 @@ app.layout = html.Div([
             html.Div([
                 html.Div([
                     html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'marginBottom': '10px'}),
-                    html.Button("Export with Required Data", style=styles['primaryButton'])
+                    html.Button("Export with Required Data", id="export-filtered-button", style=styles['primaryButton'])
                 ])
             ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
         ], style=styles['section'])
     ], style=styles['container'])
 ])
-
-# Clientside callback for Export Genealogy button to export all data
-clientside_callback(
-    """
-    function(n_clicks) {
-        if (n_clicks > 0) {
-            const grid = document.querySelector('#data-table .ag-root-wrapper');
-            if (grid && grid.__gridApi) {
-                const gridApi = grid.__gridApi;
-                gridApi.exportDataAsCsv({
-                    fileName: 'genealogy_data.csv',
-                    allColumns: true,
-                    onlySelected: false,
-                    suppressQuotes: false,
-                    columnSeparator: ','
-                });
-            }
-        }
-        return window.dash_clientside.no_update;
-    }
-    """,
-    Output('data-table', 'id'),  # Dummy output to satisfy callback requirement
-    Input('export-genealogy-button', 'n_clicks'),
-    prevent_initial_call=True
-)
 
 @callback(
     Output("from-dropdown", "options"),
@@ -341,7 +330,8 @@ def update_multi_options(search_value, value):
 
 # Callback for interactive filtering - triggered by Submit button
 @app.callback(
-    Output('data-table', 'rowData'),
+    [Output('data-table', 'rowData'),
+     Output('all-data-store', 'data')],
     [Input('submit-button', 'n_clicks')],
     [State('from-dropdown', 'value'),
      State('to-dropdown', 'value')]
@@ -349,7 +339,7 @@ def update_multi_options(search_value, value):
 def update_table(n_clicks, from_val, to_val):
     # Only process if Submit button was clicked and at least one value is provided
     if not n_clicks or (not from_val and not to_val):
-        return []  # Return empty list to keep table hidden if no submission
+        return [], []  # Return empty list to keep table hidden if no submission
     
     try:
         # Prepare parameters for get_lineage function
@@ -400,27 +390,154 @@ def update_table(n_clicks, from_val, to_val):
                 }
                 mapped_data.append(mapped_row)
             
-            return mapped_data
+            return mapped_data, mapped_data  # Return same data for both table and store
         else:
             print("No data returned from database")
-            return []  # Return empty list to keep table hidden if no results
+            return [], []  # Return empty list to keep table hidden if no results
             
     except Exception as e:
         print(f"Error getting lineage data: {e}")
-        return []  # Return empty list on error to keep table hidden
+        return [], []  # Return empty list on error to keep table hidden
+
+# Improved clientside callback to capture filtered data from AG Grid
+clientside_callback(
+    """
+    function(n_clicks, tableData) {
+        if (!n_clicks || n_clicks <= 0 || !tableData || tableData.length === 0) {
+            return window.dash_clientside.no_update;
+        }
+        
+        // Wait a bit for the grid to be ready
+        setTimeout(function() {
+            try {
+                // Try multiple methods to find the AG Grid API
+                let gridApi = null;
+                
+                // Method 1: Direct access via element property
+                const gridElement = document.querySelector('#data-table');
+                if (gridElement && gridElement._dashAgGrid && gridElement._dashAgGrid.api) {
+                    gridApi = gridElement._dashAgGrid.api;
+                }
+                
+                // Method 2: Search through child elements
+                if (!gridApi && gridElement) {
+                    const gridContainer = gridElement.querySelector('.ag-root-wrapper');
+                    if (gridContainer && gridContainer.__agGridReact && gridContainer.__agGridReact.api) {
+                        gridApi = gridContainer.__agGridReact.api;
+                    }
+                }
+                
+                // Method 3: Global search for AG Grid instances
+                if (!gridApi && window.agGrid && window.agGrid.gridOptionsMap) {
+                    const gridIds = Object.keys(window.agGrid.gridOptionsMap);
+                    if (gridIds.length > 0) {
+                        const firstGridOptions = window.agGrid.gridOptionsMap[gridIds[0]];
+                        if (firstGridOptions && firstGridOptions.api) {
+                            gridApi = firstGridOptions.api;
+                        }
+                    }
+                }
+                
+                if (gridApi) {
+                    const filteredData = [];
+                    gridApi.forEachNodeAfterFilterAndSort(function(node) {
+                        if (node.data) {
+                            filteredData.push(node.data);
+                        }
+                    });
+                    
+                    console.log('Filtered data captured:', filteredData.length, 'rows');
+                    
+                    // Store the filtered data in a way that can be accessed by the server
+                    if (filteredData.length > 0) {
+                        // Trigger the download by updating a store or directly calling download
+                        window.dash_clientside.set_props('filtered-data-store', {data: filteredData});
+                        return filteredData;
+                    } else {
+                        console.log('No filtered data found, using all table data');
+                        window.dash_clientside.set_props('filtered-data-store', {data: tableData});
+                        return tableData;
+                    }
+                } else {
+                    console.log('Grid API not found, using all table data as fallback');
+                    window.dash_clientside.set_props('filtered-data-store', {data: tableData});
+                    return tableData;
+                }
+            } catch (error) {
+                console.error('Error in clientside callback:', error);
+                console.log('Using all table data as fallback due to error');
+                window.dash_clientside.set_props('filtered-data-store', {data: tableData});
+                return tableData;
+            }
+        }, 100);
+        
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('filtered-data-store', 'data'),
+    [Input('export-filtered-button', 'n_clicks')],
+    [State('all-data-store', 'data')],
+    prevent_initial_call=True
+)
+
+# Server-side callback for Export Genealogy using dcc.Download
+@app.callback(
+    Output("download-all-data", "data"),
+    [Input('export-genealogy-button', 'n_clicks')],
+    [State('all-data-store', 'data')],
+    prevent_initial_call=True
+)
+def export_all_data(n_clicks, all_data):
+    if n_clicks and all_data:
+        try:
+            # Convert to DataFrame
+            df = pd.DataFrame(all_data)
+            
+            # Return data for download using dict format
+            return dict(content=df.to_csv(index=False), filename="genealogy_all_data.csv")
+        except Exception as e:
+            print(f"Export error: {e}")
+            return dash.no_update
+    return dash.no_update
+
+# Server-side callback for Export with Required Data using filtered data
+@app.callback(
+    Output("download-filtered-data", "data"),
+    [Input('filtered-data-store', 'data')],
+    prevent_initial_call=True
+)
+def export_filtered_data(filtered_data):
+    if filtered_data:
+        try:
+            if filtered_data:
+                # Convert to DataFrame
+                df = pd.DataFrame(filtered_data)
+                
+                print(f"Exporting {len(df)} filtered rows")
+                
+                # Return filtered data for download
+                return dict(content=df.to_csv(index=False), filename="genealogy_filtered_data.csv")
+            else:
+                print("No filtered data available")
+                return dash.no_update
+        except Exception as e:
+            print(f"Filtered export error: {e}")
+            return dash.no_update
+    return dash.no_update
 
 # Callback for Clear button
 @app.callback(
     [Output('from-dropdown', 'value'),
      Output('to-dropdown', 'value'),
-     Output('data-table', 'rowData', allow_duplicate=True)],
+     Output('data-table', 'rowData', allow_duplicate=True),
+     Output('all-data-store', 'data', allow_duplicate=True)],
     [Input('clear-button', 'n_clicks')],
     prevent_initial_call=True
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, []  # Reset to empty list to hide table
-    return dash.no_update, dash.no_update, dash.no_update
+        return None, None, [], []  # Reset everything to empty
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True)
