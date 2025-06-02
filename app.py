@@ -232,35 +232,9 @@ app.layout = html.Div([
                 ])
             ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px'}),
             
-            # Right side - Additional Filters and Data Required
+            # Right side - Data Required and Additional Filters
             html.Div([
-                # Additional Filters (Unit Operation and Attribute)
-                html.Div([
-                    html.H4("Additional Filters", style=styles['sectionTitle']),
-                    html.Div([
-                        html.Div([
-                            dcc.Dropdown(
-                                id='unit-operation-dropdown',
-                                multi=True,
-                                clearable=True,
-                                placeholder='Unit Operation',
-                                style=styles['dropdown']
-                            )
-                        ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%'}),
-                        html.Div([
-                            dcc.Dropdown(
-                                id='attribute-dropdown',
-                                multi=True,
-                                clearable=True,
-                                placeholder='Attribute',
-                                style=styles['dropdown'],
-                                options=[]  # Keep Attribute dropdown empty as requested
-                            )
-                        ], style={'width': '48%', 'display': 'inline-block'})
-                    ], style={'marginBottom': '15px'}),
-                ]),
-                
-                # Data Required
+                # Data Required (unchanged)
                 html.Div([
                     html.H4("Data Required", style=styles['sectionTitle']),
                     html.Div([
@@ -277,6 +251,28 @@ app.layout = html.Div([
                             value=[],
                             labelStyle={**styles['checkboxLabel'], 'margin': '5px'},
                             inputStyle=styles['checkbox']
+                        )
+                    ])
+                ], style={'marginBottom': '20px'}),
+                
+                # Additional Filters (stacked vertically)
+                html.Div([
+                    html.H4("Additional Filters", style=styles['sectionTitle']),
+                    html.Div([
+                        dcc.Dropdown(
+                            id='unit-operation-dropdown',
+                            multi=True,
+                            clearable=True,
+                            placeholder='Unit Operation',
+                            style=styles['dropdown']
+                        ),
+                        dcc.Dropdown(
+                            id='attribute-dropdown',
+                            multi=True,
+                            clearable=True,
+                            placeholder='Attribute',
+                            style=styles['dropdown'],
+                            options=[]  # Keep Attribute dropdown empty as requested
                         )
                     ])
                 ])
@@ -399,7 +395,7 @@ def update_table(n_clicks, from_val, to_val):
             varTraceFor = "', '".join(from_val) if isinstance(from_val, list) else str(from_val)
         
         if to_val:
-            varTraceTarget = "', '".join(to_val) if isinstance(to_val, list) else str(to_val)
+            varTraceTarget = "', '".join(to_val) if isinstance(from_val, list) else str(to_val)
         
         # Get lineage data from database
         outputType = "polars"  # "polars" or "duckdb"
