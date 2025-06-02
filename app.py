@@ -1,6 +1,6 @@
 import dash
 from dash import dcc, html, Input, Output, callback, State, clientside_callback
-from dash_echarts import DashECharts  # Updated import
+from dash_echarts import DashECharts  # Updated import based on previous troubleshooting
 import dash_ag_grid as dag
 import plotly.graph_objects as go
 import plotly.express as px
@@ -26,7 +26,7 @@ def create_network_graph():
     )
     return fig
 
-# Function to convert CSV data to hierarchical structure
+# Modified csv_to_hierarchy function to handle root_parentlot as the root
 def csv_to_hierarchy(csv_data):
     # Dictionary to track nodes with their metadata
     node_info = {}
@@ -34,94 +34,83 @@ def csv_to_hierarchy(csv_data):
     # Track all relationships
     relationships = []
 
-    # First pass: create all nodes with their descriptions
+    # First pass: create all nodes with their metadata
     for _, row in csv_data.iterrows():
+        root = row['root']
         source = row['source']
         ingredient = row['ingredient']
+        root_desc = row.get('root desc', '')
         source_desc = row.get('source desc', '')
         ingredient_desc = row.get('ingredient description', '')
-        
-        # Get workforce and cost data (using default values if columns don't exist)
-        source_workforce = row.get('source_workforce', 0)
-        source_cost = row.get('source_cost', 0)
-        ingredient_workforce = row.get('ingredient_workforce', 0)
-        ingredient_cost = row.get('ingredient_cost', 0)
-        
+        level = row.get('level', 0)
+
+        # Add root node if it doesn't exist
+        if root not in node_info:
+            node_info[root] = {
+                "name": root,
+                "description": root_desc,
+                "references": [],
+                "level": 0,  # Root is at level 0
+                "workforce": 0,
+                "Quantity": 0
+            }
+
         # Add source if it doesn't exist
         if source not in node_info:
             node_info[source] = {
                 "name": source,
                 "description": source_desc,
-                "references": [],  # Track which nodes reference this one
-                "workforce": source_workforce,
-                "Quantity": source_cost
+                "references": [],
+                "level": 1,  # Source is at level 1
+                "workforce": 0,
+                "Quantity": 0
             }
-        
+
         # Add ingredient if it doesn't exist
         if ingredient not in node_info:
             node_info[ingredient] = {
-                "name": ingredient, 
+                "name": ingredient,
                 "description": ingredient_desc,
-                "references": [],  # Track which nodes reference this one
-                "workforce": ingredient_workforce,
-                "Quantity": ingredient_cost
+                "references": [],
+                "level": level,  # Use the Level from the data
+                "workforce": 0,
+                "Quantity": 0
             }
-        
-        # Track this relationship
+
+        # Track relationships: root -> source and source -> ingredient
+        relationships.append((root, source))
         relationships.append((source, ingredient))
-        # Add reference to the ingredient
+        node_info[source]["references"].append(root)
         node_info[ingredient]["references"].append(source)
 
-    # Find root nodes (nodes not used as ingredients)
-    all_ingredients = set(csv_data['ingredient'].unique())
-    all_sources = set(csv_data['source'].unique())
-    root_candidates = all_sources - all_ingredients
-
-    # Get or create a root node
-    if not root_candidates:
-        root_name = "Start"
-        if root_name not in node_info:
-            node_info[root_name] = {
-                "name": root_name,
-                "description": "Complete manufacturing workflow",
-                "references": [],
-                "workforce": 0,  # Default values
-                "Quantity": 0
-            }
-        
-        # Connect root to major nodes (nodes with multiple children)
-        source_counts = csv_data['source'].value_counts()
-        major_nodes = source_counts[source_counts > 1].index.tolist()
-        
-        for node in major_nodes or all_sources:
-            relationships.append((root_name, node))
-            node_info[node]["references"].append(root_name)
-    elif len(root_candidates) > 1:
-        # Multiple roots - create a virtual root
-        root_name = "Manufacturing Process"
-        if root_name not in node_info:
-            node_info[root_name] = {
-                "name": root_name,
-                "description": "Complete manufacturing workflow",
-                "references": [],
-                "workforce": 0,  # Default values
-                "Quantity": 0
-            }
-        
-        for node in root_candidates:
-            relationships.append((root_name, node))
-            node_info[node]["references"].append(root_name)
+    # Build the tree starting from unique root nodes
+    unique_roots = csv_data['root'].unique()
+    if len(unique_roots) > 1:
+        # Create a virtual root if there are multiple root_parentlot values
+        root_name = "All Processes"
+        node_info[root_name] = {
+            "name": root_name,
+            "description": "All Manufacturing Processes",
+            "references": [],
+            "level": 0,
+            "workforce": 0,
+            "Quantity": 0
+        }
+        for root in unique_roots:
+            relationships.append((root_name, root))
+            node_info[root]["references"].append(root_name)
+        root_name = root_name
     else:
-        # Use the single root
-        root_name = list(root_candidates)[0]
+        root_name = unique_roots[0]
 
-    # Build the tree with each node appearing every time it's referenced
+    # Build the tree
     tree = {
         "name": node_info[root_name]["name"],
         "description": node_info[root_name]["description"],
         "children": [],
         "shared": False,
         "id": root_name,
+        "level": node_info[root_name]["level"],
         "workforce": node_info[root_name]["workforce"],
         "Quantity": node_info[root_name]["Quantity"]
     }
@@ -137,19 +126,17 @@ def csv_to_hierarchy(csv_data):
     def build_tree(node_id, parent_node):
         if node_id in parent_to_children:
             for child_id in parent_to_children[node_id]:
-                # Create the node every time it appears
                 child_node = {
                     "name": node_info[child_id]["name"],
                     "description": node_info[child_id]["description"],
                     "children": [],
                     "shared": len(node_info[child_id]["references"]) > 1,
                     "id": child_id,
+                    "level": node_info[child_id]["level"],
                     "workforce": node_info[child_id]["workforce"],
                     "Quantity": node_info[child_id]["Quantity"]
                 }
                 parent_node["children"].append(child_node)
-                
-                # Recursively add its children
                 build_tree(child_id, child_node)
 
     # Start building from the root
@@ -492,23 +479,23 @@ def update_tree_chart(data):
     if not data:
         return {}
 
-    # Convert the table data to the format required by csv_to_hierarchy
+    # Convert the table data to a DataFrame
     df = pd.DataFrame(data)
     
     # Map columns to match csv_to_hierarchy expectations
+    # Now including root_parentlot as the root
     hierarchy_data = pd.DataFrame({
-        'source': df['ProductItemCode'],
-        'ingredient': df['IngredientItemCode'],
-        'source desc': df['ProductName'],
-        'ingredient description': df['IngredientName'],
-        'source_workforce': 0,  # Default value
-        'source_cost': 0,      # Default value
-        'ingredient_workforce': 0,  # Default value
-        'ingredient_cost': 0        # Default value
+        'root': df['ParentItemCode'],  # root_parentlot
+        'source': df['ProductItemCode'],  # startnode
+        'ingredient': df['IngredientItemCode'],  # endnode
+        'root desc': df['ParentName'],  # root_parentlot (same as ParentItemCode)
+        'source desc': df['ProductName'],  # startnode (same as ProductItemCode)
+        'ingredient description': df['IngredientName'],  # endnode (same as IngredientItemCode)
+        'level': df['Level'],  # Use Level to determine hierarchy depth
     })
 
-    # Remove rows with NaN values in source or ingredient to avoid errors
-    hierarchy_data = hierarchy_data.dropna(subset=['source', 'ingredient'])
+    # Remove rows with NaN values in root, source, or ingredient to avoid errors
+    hierarchy_data = hierarchy_data.dropna(subset=['root', 'source', 'ingredient'])
 
     if hierarchy_data.empty:
         return {}
@@ -521,7 +508,7 @@ def update_tree_chart(data):
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
-            "formatter": "{b}<br/>{c.description}"
+            "formatter": "{b}<br/>{c.description}<br/>Level: {c.level}"
         },
         "series": [
             {
@@ -581,7 +568,7 @@ def update_multi_options(search_value, value):
 # Callback for interactive filtering - triggered by Submit button
 @app.callback(
     [Output('data-table', 'rowData'),
-     Output('all-data-store', 'data')],
+     Output('all-data-store', 'data adhered to the hierarchy')],
     [Input('submit-button', 'n_clicks')],
     [State('from-dropdown', 'value'),
      State('to-dropdown', 'value'),
