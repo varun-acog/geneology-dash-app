@@ -407,9 +407,9 @@ app.layout = html.Div([
         html.Div([
             html.Div([
                 html.H4("Visualization", style=styles['sectionTitle']),
-                # Export button in a separate div, aligned to the right
+                # Export button with an ID
                 html.Div([
-                    html.Button("Export", style=styles['exportButton'])
+                    html.Button("Export", id="export-visualization-button", style=styles['exportButton'])
                 ], style={'textAlign': 'right', 'marginBottom': '10px'}),
                 # ECharts tree chart
                 DashECharts(
@@ -782,6 +782,60 @@ def clear_filters(n_clicks):
     if n_clicks:
         return None, None, [], [], [], None, None  # Reset everything to empty
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+
+# Clientside callback to download the ECharts tree chart as PNG
+clientside_callback(
+    """
+    function(n_clicks) {
+        if (!n_clicks || n_clicks <= 0) {
+            console.log('Export visualization button not clicked, skipping');
+            return window.dash_clientside.no_update;
+        }
+
+        console.log('Export visualization button clicked, attempting to download PNG');
+
+        // Get the ECharts component DOM element
+        const chartElement = document.getElementById('tree-chart');
+        if (!chartElement) {
+            console.error('Could not find tree-chart element');
+            return window.dash_clientside.no_update;
+        }
+
+        // Get the ECharts instance
+        const echartsInstance = window.echarts.getInstanceByDom(chartElement);
+        if (!echartsInstance) {
+            console.error('Could not find ECharts instance for tree-chart');
+            return window.dash_clientside.no_update;
+        }
+
+        // Generate the PNG data URL
+        const dataURL = echartsInstance.getDataURL({
+            type: 'png',
+            pixelRatio: 2,  // Increase resolution for better quality
+            backgroundColor: '#fff'  // White background for the PNG
+        });
+
+        if (!dataURL) {
+            console.error('Failed to generate PNG data URL');
+            return window.dash_clientside.no_update;
+        }
+
+        // Create a temporary link element to trigger the download
+        const link = document.createElement('a');
+        link.href = dataURL;
+        link.download = 'genealogy_tree.png';  // File name for the download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        console.log('PNG download triggered successfully');
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('tree-chart', 'id'),  # Dummy output to satisfy Dash callback requirement
+    [Input('export-visualization-button', 'n_clicks')],
+    prevent_initial_call=True
+)
 
 if __name__ == '__main__':
     app.run(debug=True)
