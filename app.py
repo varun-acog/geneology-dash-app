@@ -58,12 +58,12 @@ def csv_to_hierarchy(csv_data):
         # Add source if it doesn't exist
         if source not in node_info:
             node_info[source] = {
-                "name": source,
-                "description": source_desc,
-                "references": [],
-                "level": 1,  # Source is at level 1
-                "workforce": 0,
-                "Quantity": 0
+            "name": source,
+            "description": source_desc,
+            "references": [],
+            "level": 1,  # Source is at level 1
+            "workforce": 0,
+            "Quantity": 0
             }
 
         # Add ingredient if it doesn't exist
@@ -719,30 +719,6 @@ clientside_callback(
     prevent_initial_call=True
 )
 
-# Clientside callback to trigger the server-side download callback
-clientside_callback(
-    """
-    function(n_clicks, filteredData) {
-        if (!n_clicks || n_clicks <= 0) {
-            console.log('Export button not clicked, skipping');
-            return window.dash_clientside.no_update;
-        }
-
-        if (!filteredData || filteredData.length === 0) {
-            console.log('No filtered data available to export, skipping');
-            return window.dash_clientside.no_update;
-        }
-
-        console.log('Export filtered button clicked, triggering download with', filteredData.length, 'rows');
-        return n_clicks;
-    }
-    """,
-    Output('filtered-data-store', 'modified_timestamp'),
-    [Input('export-filtered-button', 'n_clicks'),
-     State('filtered-data-store', 'data')],
-    prevent_initial_call=True
-)
-
 # Server-side callback for Export Genealogy (all data)
 @app.callback(
     Output("download-all-data", "data"),
@@ -766,11 +742,14 @@ def export_all_data(n_clicks, all_data):
 # Server-side callback for Export with Required Data (filtered data)
 @app.callback(
     Output("download-filtered-data", "data"),
-    [Input('filtered-data-store', 'modified_timestamp')],
+    [Input('export-filtered-button', 'n_clicks')],
     [State('filtered-data-store', 'data')],
     prevent_initial_call=True
 )
-def export_filtered_data(timestamp, filtered_data):
+def export_filtered_data(n_clicks, filtered_data):
+    if not n_clicks:  # Only proceed if the button was clicked
+        return dash.no_update
+
     if filtered_data is not None and len(filtered_data) > 0:
         try:
             # Convert to DataFrame
