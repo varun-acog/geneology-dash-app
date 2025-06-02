@@ -188,3 +188,9 @@ $.get(ROOT_PATH + '/data/asset/data/flare.json', function (data) {
 option && myChart.setOption(option);
 
 To this I want to use my real json
+
+Traceback (most recent call last):
+  File "/home/users/pr912591/Lineage/Lineage/app2.py", line 3, in <module>
+    from dash_echarts import EChart  # Import EChart component
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'dash_echarts'
