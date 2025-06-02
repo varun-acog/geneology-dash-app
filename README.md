@@ -1,7 +1,13 @@
 (This error originated from the built-in JavaScript code that runs Dash apps. Click to see the full stack trace or open your browser's console.)
-TypeError: Cannot read properties of undefined (reading 'd2f67ac30ba0fff6d017e99b42190c297526ffb1394c3f5c979277003a8c28a7')
+TypeError: filter.filter.toLowerCase is not a function
 
-    at _callee2$ (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75380:56)
+    at http://127.0.0.1:8051/:66:67
+
+    at Array.filter (<anonymous>)
+
+    at Object.ns.64d272701c96fd4db481a99c5c1fd2894a744247764a2e01acf32ba0042262ab (http://127.0.0.1:8051/:57:36)
+
+    at _callee2$ (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75380:72)
 
     at tryCatch (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:1062)
 
@@ -14,9 +20,3 @@ TypeError: Cannot read properties of undefined (reading 'd2f67ac30ba0fff6d017e99
     at _next (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:163)
 
     at http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:299
-
-    at new Promise (<anonymous>)
-
-    at http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:90
-
-    at handleClientside (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75331:28)
