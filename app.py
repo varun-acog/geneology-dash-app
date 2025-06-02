@@ -399,48 +399,55 @@ def update_table(n_clicks, from_val, to_val):
         print(f"Error getting lineage data: {e}")
         return [], []  # Return empty list on error to keep table hidden
 
-# Simplified clientside callback to capture filtered data from AG Grid
+# Clientside callback to capture filtered data whenever the filter changes
 clientside_callback(
     """
-    function(n_clicks, tableData) {
-        if (!n_clicks || n_clicks <= 0 || !tableData || tableData.length === 0) {
-            return window.dash_clientside.no_update;
+    function(filterModel, rowData) {
+        console.log('Filter changed:', filterModel);
+        console.log('Row data length:', rowData ? rowData.length : 'No data');
+
+        if (!rowData || rowData.length === 0) {
+            return [];
         }
 
-        // Access the AG Grid API directly
         const gridElement = document.querySelector('#data-table');
-        if (gridElement && gridElement.__gridApi) {
-            const gridApi = gridElement.__gridApi;
-            
-            // Get filtered and sorted data
-            const filteredData = [];
-            gridApi.forEachNodeAfterFilterAndSort(function(node) {
-                if (node.data) {
-                    filteredData.push(node.data);
-                }
-            });
-
-            console.log('Filtered data captured:', filteredData.length, 'rows');
-
-            // If filtered data exists, store it; otherwise, use the full dataset
-            if (filteredData.length > 0) {
-                window.dash_clientside.set_props('filtered-data-store', {data: filteredData});
-                return filteredData;
-            } else {
-                console.log('No filtered data found, using all table data');
-                window.dash_clientside.set_props('filtered-data-store', {data: tableData});
-                return tableData;
-            }
-        } else {
-            console.log('Grid API not found, using all table data as fallback');
-            window.dash_clientside.set_props('filtered-data-store', {data: tableData});
-            return tableData;
+        if (!gridElement || !gridElement.__gridApi) {
+            console.log('Grid API not found, returning full data');
+            return rowData;
         }
+
+        const gridApi = gridElement.__gridApi;
+        const filteredData = [];
+        gridApi.forEachNodeAfterFilterAndSort(function(node) {
+            if (node.data) {
+                filteredData.push(node.data);
+            }
+        });
+
+        console.log('Filtered data captured:', filteredData.length, 'rows');
+        return filteredData.length > 0 ? filteredData : rowData;
     }
     """,
     Output('filtered-data-store', 'data'),
-    [Input('export-filtered-button', 'n_clicks')],
+    [Input('data-table', 'filterModel')],
     [State('all-data-store', 'data')],
+    prevent_initial_call=True
+)
+
+# Clientside callback to trigger download when the export button is clicked
+clientside_callback(
+    """
+    function(n_clicks) {
+        if (n_clicks > 0) {
+            console.log('Export filtered button clicked, n_clicks:', n_clicks);
+            // The actual download is handled by the server-side callback
+            return n_clicks;
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('filtered-data-store', 'modified_timestamp'),  # Trigger the server-side callback
+    [Input('export-filtered-button', 'n_clicks')],
     prevent_initial_call=True
 )
 
@@ -467,41 +474,41 @@ def export_all_data(n_clicks, all_data):
 # Server-side callback for Export with Required Data using filtered data
 @app.callback(
     Output("download-filtered-data", "data"),
-    [Input('filtered-data-store', 'data')],
+    [Input('filtered-data-store', 'modified_timestamp')],
+    [State('filtered-data-store', 'data')],
     prevent_initial_call=True
 )
-def export_filtered_data(filtered_data):
+def export_filtered_data(timestamp, filtered_data):
     if filtered_data:
         try:
-            if filtered_data:
-                # Convert to DataFrame
-                df = pd.DataFrame(filtered_data)
-                
-                print(f"Exporting {len(df)} filtered rows")
-                
-                # Return filtered data for download
-                return dict(content=df.to_csv(index=False), filename="genealogy_filtered_data.csv")
-            else:
-                print("No filtered data available")
-                return dash.no_update
+            # Convert to DataFrame
+            df = pd.DataFrame(filtered_data)
+            
+            print(f"Exporting {len(df)} filtered rows")
+            
+            # Return filtered data for download
+            return dict(content=df.to_csv(index=False), filename="genealogy_filtered_data.csv")
         except Exception as e:
             print(f"Filtered export error: {e}")
             return dash.no_update
-    return dash.no_update
+    else:
+        print("No filtered data available")
+        return dash.no_update
 
 # Callback for Clear button
 @app.callback(
     [Output('from-dropdown', 'value'),
      Output('to-dropdown', 'value'),
      Output('data-table', 'rowData', allow_duplicate=True),
-     Output('all-data-store', 'data', allow_duplicate=True)],
+     Output('all-data-store', 'data', allow_duplicate=True),
+     Output('filtered-data-store', 'data', allow_duplicate=True)],
     [Input('clear-button', 'n_clicks')],
     prevent_initial_call=True
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], []  # Reset everything to empty
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, None, [], [], []  # Reset everything to empty
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True)
