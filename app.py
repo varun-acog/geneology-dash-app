@@ -287,12 +287,19 @@ app.layout = html.Div([
                     dashGridOptions={
                         "pagination": True,
                         "paginationPageSize": 20,
+                        "suppressExcelExport": False,
+                        "suppressCsvExport": False,
                     },
                     className="ag-theme-alpine",
                     # Enable CSV export
                     enableEnterpriseModules=False,  # Use community features
                     csvExportParams={
-                        "fileName": "genealogy_data.csv",
+                        "fileName": "genealogy_filtered_data.csv",
+                        "onlySelected": False,
+                        "skipPinnedTop": False,
+                        "skipPinnedBottom": False,
+                        "allColumns": True,
+                        "onlyFilteredAndSorted": True,  # This is key - only export filtered data
                     }
                 )
             ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
@@ -399,59 +406,45 @@ def update_table(n_clicks, from_val, to_val):
         print(f"Error getting lineage data: {e}")
         return [], []  # Return empty list on error to keep table hidden
 
-# Clientside callback to capture filtered data whenever the filter changes
-clientside_callback(
-    """
-    function(filterModel, rowData) {
-        console.log('Filter changed:', filterModel);
-        console.log('Row data length:', rowData ? rowData.length : 'No data');
-
-        if (!rowData || rowData.length === 0) {
-            return [];
-        }
-
-        const gridElement = document.querySelector('#data-table');
-        if (!gridElement || !gridElement.__gridApi) {
-            console.log('Grid API not found, returning full data');
-            return rowData;
-        }
-
-        const gridApi = gridElement.__gridApi;
-        const filteredData = [];
-        gridApi.forEachNodeAfterFilterAndSort(function(node) {
-            if (node.data) {
-                filteredData.push(node.data);
-            }
-        });
-
-        console.log('Filtered data captured:', filteredData.length, 'rows');
-        return filteredData.length > 0 ? filteredData : rowData;
-    }
-    """,
-    Output('filtered-data-store', 'data'),
-    [Input('data-table', 'filterModel')],
-    [State('all-data-store', 'data')],
-    prevent_initial_call=True
-)
-
-# Clientside callback to trigger download when the export button is clicked
+# Use AG Grid's built-in export functionality for filtered data
 clientside_callback(
     """
     function(n_clicks) {
-        if (n_clicks > 0) {
-            console.log('Export filtered button clicked, n_clicks:', n_clicks);
-            // The actual download is handled by the server-side callback
-            return n_clicks;
+        if (!n_clicks || n_clicks <= 0) {
+            return window.dash_clientside.no_update;
         }
+
+        console.log('Export filtered button clicked, using AG Grid export...');
+
+        // Find the AG Grid element
+        const gridElement = document.querySelector('#data-table');
+        if (gridElement && gridElement.__gridApi) {
+            const gridApi = gridElement.__gridApi;
+            
+            // Use AG Grid's built-in CSV export with filtered data only
+            const params = {
+                fileName: 'genealogy_filtered_data.csv',
+                onlyFilteredAndSorted: true,  // Only export filtered and sorted data
+                allColumns: true,
+                skipPinnedTop: false,
+                skipPinnedBottom: false
+            };
+            
+            gridApi.exportDataAsCsv(params);
+            console.log('AG Grid CSV export triggered');
+        } else {
+            console.log('Grid API not found');
+        }
+
         return window.dash_clientside.no_update;
     }
     """,
-    Output('filtered-data-store', 'modified_timestamp'),  # Trigger the server-side callback
-    [Input('export-filtered-button', 'n_clicks')],
+    Output('filtered-data-store', 'data'),
+    Input('export-filtered-button', 'n_clicks'),
     prevent_initial_call=True
 )
 
-# Server-side callback for Export Genealogy using dcc.Download
+# Keep the server-side callback for the "Export Genealogy" button (all data)
 @app.callback(
     Output("download-all-data", "data"),
     [Input('export-genealogy-button', 'n_clicks')],
@@ -471,44 +464,19 @@ def export_all_data(n_clicks, all_data):
             return dash.no_update
     return dash.no_update
 
-# Server-side callback for Export with Required Data using filtered data
-@app.callback(
-    Output("download-filtered-data", "data"),
-    [Input('filtered-data-store', 'modified_timestamp')],
-    [State('filtered-data-store', 'data')],
-    prevent_initial_call=True
-)
-def export_filtered_data(timestamp, filtered_data):
-    if filtered_data:
-        try:
-            # Convert to DataFrame
-            df = pd.DataFrame(filtered_data)
-            
-            print(f"Exporting {len(df)} filtered rows")
-            
-            # Return filtered data for download
-            return dict(content=df.to_csv(index=False), filename="genealogy_filtered_data.csv")
-        except Exception as e:
-            print(f"Filtered export error: {e}")
-            return dash.no_update
-    else:
-        print("No filtered data available")
-        return dash.no_update
-
 # Callback for Clear button
 @app.callback(
     [Output('from-dropdown', 'value'),
      Output('to-dropdown', 'value'),
      Output('data-table', 'rowData', allow_duplicate=True),
-     Output('all-data-store', 'data', allow_duplicate=True),
-     Output('filtered-data-store', 'data', allow_duplicate=True)],
+     Output('all-data-store', 'data', allow_duplicate=True)],
     [Input('clear-button', 'n_clicks')],
     prevent_initial_call=True
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], [], []  # Reset everything to empty
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, None, [], []  # Reset everything to empty
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True)
