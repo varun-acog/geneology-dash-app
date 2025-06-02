@@ -379,9 +379,11 @@ def update_multi_options(search_value, value):
      Output('all-data-store', 'data')],
     [Input('submit-button', 'n_clicks')],
     [State('from-dropdown', 'value'),
-     State('to-dropdown', 'value')]
+     State('to-dropdown', 'value'),
+     State('unit-operation-dropdown', 'value'),
+     State('attribute-dropdown', 'value')]
 )
-def update_table(n_clicks, from_val, to_val):
+def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
     # Only process if Submit button was clicked and at least one value is provided
     if not n_clicks or (not from_val and not to_val):
         return [], []  # Return empty list to keep table hidden if no submission
@@ -435,7 +437,18 @@ def update_table(n_clicks, from_val, to_val):
                 }
                 mapped_data.append(mapped_row)
             
-            return mapped_data, mapped_data  # Return same data for both table and store
+            # Apply additional filtering based on Unit Operation
+            filtered_data = mapped_data
+            if unit_operation_val:  # If Unit Operation values are selected
+                filtered_data = [
+                    row for row in mapped_data
+                    if (row['ProductItemCode'] in unit_operation_val or row['IngredientItemCode'] in unit_operation_val)
+                ]
+            
+            # For now, Attribute dropdown is empty, so no filtering based on attribute_val
+            # If attribute_val is used in the future, add similar filtering logic here
+            
+            return filtered_data, mapped_data  # Return filtered data for table, original data for store
         else:
             print("No data returned from database")
             return [], []  # Return empty list to keep table hidden if no results
