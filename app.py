@@ -232,9 +232,9 @@ app.layout = html.Div([
                 ])
             ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px'}),
             
-            # Right side - Data Required and Additional Filters
+            # Right side - Data Required and Additional Filters (side by side)
             html.Div([
-                # Data Required (unchanged)
+                # Data Required
                 html.Div([
                     html.H4("Data Required", style=styles['sectionTitle']),
                     html.Div([
@@ -253,7 +253,7 @@ app.layout = html.Div([
                             inputStyle=styles['checkbox']
                         )
                     ])
-                ], style={'marginBottom': '20px'}),
+                ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '4%'}),
                 
                 # Additional Filters (stacked vertically)
                 html.Div([
@@ -275,7 +275,7 @@ app.layout = html.Div([
                             options=[]  # Keep Attribute dropdown empty as requested
                         )
                     ])
-                ])
+                ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'})
             ], style={'width': '65%', 'display': 'inline-block', 'verticalAlign': 'top'})
         ], style=styles['section']),
         
