@@ -309,36 +309,24 @@ app.layout = html.Div([
             html.Div([
                 html.H4("Filters", style=styles['sectionTitle']),
                 
-                # FROM and TO inputs with loading states
+                # FROM and TO inputs
                 html.Div([
                     html.Div([
-                        dcc.Loading(
-                            id="loading-from-dropdown",
-                            type="default",
-                            children=[
-                                dcc.Dropdown(
-                                    id='from-dropdown',
-                                    multi=True,
-                                    clearable=False,
-                                    placeholder='FROM',
-                                    style=styles['dropdown']
-                                )
-                            ]
+                        dcc.Dropdown(
+                            id='from-dropdown',
+                            multi=True,
+                            clearable=False,
+                            placeholder='FROM',
+                            style=styles['dropdown']
                         )
                     ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%'}),
                     html.Div([
-                        dcc.Loading(
-                            id="loading-to-dropdown",
-                            type="default",
-                            children=[
-                                dcc.Dropdown(
-                                    id='to-dropdown',
-                                    placeholder='TO',
-                                    multi=True,
-                                    clearable=False,
-                                    style=styles['dropdown']
-                                )
-                            ]
+                        dcc.Dropdown(
+                            id='to-dropdown',
+                            placeholder='TO',
+                            multi=True,
+                            clearable=False,
+                            style=styles['dropdown']
                         )
                     ], style={'width': '48%', 'display': 'inline-block'})
                 ], style={'marginBottom': '15px'}),
@@ -423,7 +411,7 @@ app.layout = html.Div([
                 html.Div([
                     html.Button("Export", id="export-visualization-button", style=styles['exportButton'])
                 ], style={'textAlign': 'right', 'marginBottom': '10px'}),
-                # ECharts tree chart with loading state
+                # Wrap ECharts tree chart in dcc.Loading
                 dcc.Loading(
                     id="loading-tree-chart",
                     type="default",  # Default spinner type
@@ -438,30 +426,24 @@ app.layout = html.Div([
             ])
         ], style=styles['section']),
         
-        # Data section with loading state
+        # Data section
         html.Div([
             html.Div([
                 html.H4("Data", style=styles['sectionTitle']),
-                dcc.Loading(
-                    id="loading-data-table",
-                    type="default",
-                    children=[
-                        dag.AgGrid(
-                            id='data-table',
-                            columnDefs=columnDefs,
-                            rowData=[],  # Set initial rowData to empty list to hide table
-                            defaultColDef=defaultColDef,
-                            style={'height': '400px', 'width': '100%'},
-                            dashGridOptions={
-                                "pagination": True,
-                                "paginationPageSize": 20,
-                                "suppressExcelExport": False,
-                                "suppressCsvExport": False,
-                            },
-                            className="ag-theme-alpine",
-                            enableEnterpriseModules=False,  # Use community features
-                        )
-                    ]
+                dag.AgGrid(
+                    id='data-table',
+                    columnDefs=columnDefs,
+                    rowData=[],  # Set initial rowData to empty list to hide table
+                    defaultColDef=defaultColDef,
+                    style={'height': '400px', 'width': '100%'},
+                    dashGridOptions={
+                        "pagination": True,
+                        "paginationPageSize": 20,
+                        "suppressExcelExport": False,
+                        "suppressCsvExport": False,
+                    },
+                    className="ag-theme-alpine",
+                    enableEnterpriseModules=False,  # Use community features
                 )
             ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
             
@@ -839,8 +821,8 @@ clientside_callback(
         // Generate the PNG data URL
         const dataURL = echartsInstance.getDataURL({
             type: 'png',
-            pixelRatio: 2,  # Increase resolution for better quality
-            backgroundColor: '#fff'  # White background for the PNG
+            pixelRatio: 2,  // Increase resolution for better quality
+            backgroundColor: '#fff'  // White background for the PNG
         });
 
         if (!dataURL) {
@@ -851,7 +833,7 @@ clientside_callback(
         // Create a temporary link element to trigger the download
         const link = document.createElement('a');
         link.href = dataURL;
-        link.download = 'genealogy_tree.png';  # File name for the download
+        link.download = 'genealogy_tree.png';  // File name for the download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
