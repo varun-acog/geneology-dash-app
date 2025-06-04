@@ -403,7 +403,7 @@ app.layout = html.Div([
             ], style={'width': '65%', 'display': 'inline-block', 'verticalAlign': 'top'})
         ], style=styles['section']),
         
-        # Visualization section with ECharts tree chart
+        # Visualization section with ECharts tree chart and loading state
         html.Div([
             html.Div([
                 html.H4("Visualization", style=styles['sectionTitle']),
@@ -411,11 +411,17 @@ app.layout = html.Div([
                 html.Div([
                     html.Button("Export", id="export-visualization-button", style=styles['exportButton'])
                 ], style={'textAlign': 'right', 'marginBottom': '10px'}),
-                # ECharts tree chart
-                DashECharts(
-                    id='tree-chart',
-                    option={},
-                    style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+                # Wrap ECharts tree chart in dcc.Loading
+                dcc.Loading(
+                    id="loading-tree-chart",
+                    type="default",  # Default spinner type
+                    children=[
+                        DashECharts(
+                            id='tree-chart',
+                            option={},
+                            style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+                        )
+                    ]
                 )
             ])
         ], style=styles['section']),
