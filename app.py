@@ -11,38 +11,6 @@ from Lineage import get_item_codes
 from dash.exceptions import PreventUpdate
 from Lineage import get_lineage
 
-# Custom CSS for loading spinner
-external_stylesheets = [
-    {
-        'href': 'https://use.fontawesome.com/releases/v5.8.1/css/all.css',
-        'rel': 'stylesheet',
-        'integrity': 'sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf',
-        'crossorigin': 'anonymous'
-    },
-    """
-    .dash-loading {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 9999;
-        background: rgba(255, 255, 255, 0.5);  /* Semi-transparent overlay */
-        width: 100%;
-        height: 100%;
-        pointer-events: none;  /* Allow interaction with elements underneath */
-    }
-    .dash-loading-callback {
-        font-size: 24px;
-    }
-    """
-]
-
-# Initialize the Dash app with custom CSS
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
 # Function to create a network visualization graph (currently unused, replaced by ECharts)
 def create_network_graph():
     """Create a network visualization graph"""
@@ -183,6 +151,9 @@ def csv_to_hierarchy(csv_data):
     build_tree(root_name, tree)
 
     return tree
+
+# Initialize the Dash app
+app = dash.Dash(__name__)
 
 # Define custom styles
 styles = {
@@ -334,63 +305,56 @@ app.layout = html.Div([
         
         # Filters and controls section
         html.Div([
-            # Left side controls (Filters) with loading state
-            dcc.Loading(
-                id="loading-filters",
-                type="default",
-                color="#3498db",
-                children=[
+            # Left side controls (Filters)
+            html.Div([
+                html.H4("Filters", style=styles['sectionTitle']),
+                
+                # FROM and TO inputs
+                html.Div([
                     html.Div([
-                        html.H4("Filters", style=styles['sectionTitle']),
-                        
-                        # FROM and TO inputs
-                        html.Div([
-                            html.Div([
-                                dcc.Dropdown(
-                                    id='from-dropdown',
-                                    multi=True,
-                                    clearable=False,
-                                    placeholder='FROM',
-                                    style=styles['dropdown']
-                                )
-                            ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%'}),
-                            html.Div([
-                                dcc.Dropdown(
-                                    id='to-dropdown',
-                                    placeholder='TO',
-                                    multi=True,
-                                    clearable=False,
-                                    style=styles['dropdown']
-                                )
-                            ], style={'width': '48%', 'display': 'inline-block'})
-                        ], style={'marginBottom': '15px'}),
-                    
-                        # Level checkboxes (replacing buttons)
-                        html.Div([
-                            dcc.Checklist(
-                                id='lot-level-check',
-                                options=[{'label': 'Lot Level', 'value': 'lot'}],
-                                value=['lot'],  # Set Lot Level as checked by default
-                                style={'display': 'inline-block'},
-                                labelStyle=styles['checkboxLabel'],
-                                inputStyle=styles['checkbox']
-                            ),
-                            dcc.Checklist(
-                                id='bag-level-check',
-                                options=[{'label': 'Bag Level', 'value': 'bag'}],
-                                value=[],
-                                style={'display': 'inline-block'},
-                                labelStyle=styles['checkboxLabel'],
-                                inputStyle=styles['checkbox']
-                            ),
-                            html.Div([
-                                html.Button("Submit", id="submit-button", style=styles['exportButton']),
-                                html.Button("Clear", id="clear-button", style=styles['clearButton'])
-                            ], style={'textAlign': 'right', 'marginBottom': '10px'}),
-                        ])
-                    ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px', 'position': 'relative'})
-                ]
-            ),
+                        dcc.Dropdown(
+                            id='from-dropdown',
+                            multi=True,
+                            clearable=False,
+                            placeholder='FROM',
+                            style=styles['dropdown']
+                        )
+                    ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%'}),
+                    html.Div([
+                        dcc.Dropdown(
+                            id='to-dropdown',
+                            placeholder='TO',
+                            multi=True,
+                            clearable=False,
+                            style=styles['dropdown']
+                        )
+                    ], style={'width': '48%', 'display': 'inline-block'})
+                ], style={'marginBottom': '15px'}),
+            
+                # Level checkboxes (replacing buttons)
+                html.Div([
+                    dcc.Checklist(
+                        id='lot-level-check',
+                        options=[{'label': 'Lot Level', 'value': 'lot'}],
+                        value=['lot'],  # Set Lot Level as checked by default
+                        style={'display': 'inline-block'},
+                        labelStyle=styles['checkboxLabel'],
+                        inputStyle=styles['checkbox']
+                    ),
+                    dcc.Checklist(
+                        id='bag-level-check',
+                        options=[{'label': 'Bag Level', 'value': 'bag'}],
+                        value=[],
+                        style={'display': 'inline-block'},
+                        labelStyle=styles['checkboxLabel'],
+                        inputStyle=styles['checkbox']
+                    ),
+                    html.Div([
+                        html.Button("Submit", id="submit-button", style=styles['exportButton']),
+                        html.Button("Clear", id="clear-button", style=styles['clearButton'])
+                    ], style={'textAlign': 'right', 'marginBottom': '10px'}),
+                ])
+            ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px'}),
             
             # Right side - Data Required and Additional Filters (side by side)
             html.Div([
@@ -546,6 +510,7 @@ def update_tree_chart(data):
 
     # Generate the hierarchical JSON
     tree_data = csv_to_hierarchy(hierarchy_data)
+    # print(tree_data)
 
     # ECharts tree chart configuration
     option = {
