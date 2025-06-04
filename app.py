@@ -510,13 +510,14 @@ def update_tree_chart(data):
 
     # Generate the hierarchical JSON
     tree_data = csv_to_hierarchy(hierarchy_data)
+    # print(tree_data)
 
     # ECharts tree chart configuration
     option = {
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
-            "formatter": "{b}<br/>{c.description}<br/>Level: {c.level}"
+            "formatter": "{b}<br/>"
         },
         "series": [
             {
@@ -606,7 +607,10 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
         
         # Fetch data with the specified output columns
         res = get_lineage(varTraceFor, varTraceTarget, outputType, GenOrTrc, level, 
-                         outputcols="type, root_parentlot, product_parentlot as startnode, ingredient_parentlot as endnode, level")
+                         outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
+                                        root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
+                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription
+                                        """)
         
         print("Database result:", res)
         print("Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
