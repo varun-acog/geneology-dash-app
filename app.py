@@ -116,7 +116,7 @@ def csv_to_hierarchy(csv_data):
     }
 
     # Build a map of parent -> children
-    parent_to_children = {}
+ gradiant_to_children = {}
     for parent, child in relationships:
         if parent not in parent_to_children:
             parent_to_children[parent] = []
@@ -630,6 +630,8 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             # Convert to pandas if it's a polars DataFrame
             if hasattr(res, 'to_pandas'):
                 df_result = res.to_pandas()
+                print("ParentName values:", df_result['ParentName'].head().to_list())
+                print("Level values:", df_result['Level'].head().to_list())
             else:
                 df_result = res
             
@@ -640,7 +642,7 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
                     'ParentItemCode': row.get('root_itemcode', ''),
                     'ParentName': row.get('ParentName', ''),
                     'ParentPN': row.get('root_parentlot', ''),
-                    'Level': row.get('level', ''),
+                    'Level': row.get('Level', ''),  # Fixed case: 'level' to 'Level'
                     'ProductItemCode': row.get('product_itemcode', ''),
                     'ProductName': row.get('ProductName', ''),
                     'ProductPN': row.get('startnode', ''),
