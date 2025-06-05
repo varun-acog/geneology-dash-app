@@ -532,9 +532,9 @@ def update_tree_chart(data):
             "trigger": "item",
             "triggerOn": "mousemove",
             "formatter": """function(params) {
-                var name = params.data.name || '';
+                var baseTooltip = params.name + '<br/>';  // Original tooltip format: node name + line break
                 var description = params.data.description || 'No description available';
-                return name + '<br/>' + description;
+                return baseTooltip + description;  // Append the description
             }"""
         },
         "series": [
