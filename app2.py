@@ -58,12 +58,12 @@ def csv_to_hierarchy(csv_data):
         # Add source if it doesn't exist
         if source not in node_info:
             node_info[source] = {
-            "name": source,
-            "description": source_desc,
-            "references": [],
-            "level": 1,  # Source is at level 1
-            "workforce": 0,
-            "Quantity": 0
+                "name": source,
+                "description": source_desc,
+                "references": [],
+                "level": 1,  # Source is at level 1
+                "workforce": 0,
+                "Quantity": 0
             }
 
         # Add ingredient if it doesn't exist
@@ -261,7 +261,7 @@ styles = {
     }
 }
 
-# AG Grid column definitions with filtering enabled
+# AG Grid column definitions with filtering enabled, including CntRecs
 columnDefs = [
     {"field": "ParentItemCode", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "ParentName", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
@@ -309,7 +309,7 @@ app.layout = html.Div([
             html.Div([
                 html.H4("Filters", style=styles['sectionTitle']),
                 
-                # FROM and TO inputs
+                # FROM and TO inputs without loading states
                 html.Div([
                     html.Div([
                         dcc.Dropdown(
@@ -426,24 +426,30 @@ app.layout = html.Div([
             ])
         ], style=styles['section']),
         
-        # Data section
+        # Data section with loading state
         html.Div([
             html.Div([
                 html.H4("Data", style=styles['sectionTitle']),
-                dag.AgGrid(
-                    id='data-table',
-                    columnDefs=columnDefs,
-                    rowData=[],  # Set initial rowData to empty list to hide table
-                    defaultColDef=defaultColDef,
-                    style={'height': '400px', 'width': '100%'},
-                    dashGridOptions={
-                        "pagination": True,
-                        "paginationPageSize": 20,
-                        "suppressExcelExport": False,
-                        "suppressCsvExport": False,
-                    },
-                    className="ag-theme-alpine",
-                    enableEnterpriseModules=False,  # Use community features
+                dcc.Loading(
+                    id="loading-data-table",
+                    type="default",
+                    children=[
+                        dag.AgGrid(
+                            id='data-table',
+                            columnDefs=columnDefs,
+                            rowData=[],  # Set initial rowData to empty list to hide table
+                            defaultColDef=defaultColDef,
+                            style={'height': '400px', 'width': '100%'},
+                            dashGridOptions={
+                                "pagination": True,
+                                "paginationPageSize": 20,
+                                "suppressExcelExport": False,
+                                "suppressCsvExport": False,
+                            },
+                            className="ag-theme-alpine",
+                            enableEnterpriseModules=False,  # Use community features
+                        )
+                    ]
                 )
             ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
             
@@ -497,14 +503,13 @@ def update_tree_chart(data):
     df = pd.DataFrame(data)
     
     # Map columns to match csv_to_hierarchy expectations
-    # Now including root_parentlot as the root
     hierarchy_data = pd.DataFrame({
-        'root': df['ParentItemCode'],  # root_parentlot
+        'root': df['ParentItemCode'],  # root_itemcode
         'source': df['ProductItemCode'],  # startnode
         'ingredient': df['IngredientItemCode'],  # endnode
-        'root desc': df['ParentName'],  # root_parentlot (same as ParentItemCode)
-        'source desc': df['ProductName'],  # startnode (same as ProductItemCode)
-        'ingredient description': df['IngredientName'],  # endnode (same as IngredientItemCode)
+        'root desc': df['ParentName'],  # ParentName
+        'source desc': df['ProductName'],  # ProductName
+        'ingredient description': df['IngredientName'],  # IngredientName
         'level': df['Level'],  # Use Level to determine hierarchy depth
     })
 
@@ -516,8 +521,7 @@ def update_tree_chart(data):
 
     # Generate the hierarchical JSON
     tree_data = csv_to_hierarchy(hierarchy_data)
-    # print(tree_data)
-
+    
     # ECharts tree chart configuration
     option = {
         "tooltip": {
@@ -611,12 +615,12 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
         GenOrTrc = "all"  # "trc", "gen", or "all"
         level = -99  # -99 for all levels, 1 for first level, etc.
         
-        # Fetch data with the specified output columns
+        # Fetch data with the specified output columns, including COUNT(*) as CntRecs
         res = get_lineage(varTraceFor, varTraceTarget, outputType, GenOrTrc, level, 
                          outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
                                         root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
-                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription
-                                        """)
+                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription,
+                                        COUNT(*) as CntRecs""")
         
         print("Database result:", res)
         print("Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
@@ -633,17 +637,17 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             mapped_data = []
             for _, row in df_result.iterrows():
                 mapped_row = {
-                    'ParentItemCode': row.get('root_parentlot', ''),
-                    'ParentName': row.get('root_parentlot', ''),
+                    'ParentItemCode': row.get('root_itemcode', ''),
+                    'ParentName': row.get('ParentName', ''),
                     'ParentPN': row.get('root_parentlot', ''),
-                    'Level': row.get('Level', ''),
-                    'ProductItemCode': row.get('startnode', ''),
-                    'ProductName': row.get('startnode', ''),
+                    'Level': row.get('level', ''),
+                    'ProductItemCode': row.get('product_itemcode', ''),
+                    'ProductName': row.get('ProductName', ''),
                     'ProductPN': row.get('startnode', ''),
-                    'IngredientItemCode': row.get('endnode', ''),
-                    'IngredientName': row.get('endnode', ''),
+                    'IngredientItemCode': row.get('ingredient_itemcode', ''),
+                    'IngredientName': row.get('IngredientName', ''),
                     'IngredientPN': row.get('endnode', ''),
-                    'CntRecs': row.get('CntRecs', '')
+                    'CntRecs': row.get('CntRecs', 0)  # Default to 0 if CntRecs is missing
                 }
                 mapped_data.append(mapped_row)
             
@@ -821,8 +825,8 @@ clientside_callback(
         // Generate the PNG data URL
         const dataURL = echartsInstance.getDataURL({
             type: 'png',
-            pixelRatio: 2,  // Increase resolution for better quality
-            backgroundColor: '#fff'  // White background for the PNG
+            pixelRatio: 2,  # Increase resolution for better quality
+            backgroundColor: '#fff'  # White background for the PNG
         });
 
         if (!dataURL) {
@@ -833,7 +837,7 @@ clientside_callback(
         // Create a temporary link element to trigger the download
         const link = document.createElement('a');
         link.href = dataURL;
-        link.download = 'genealogy_tree.png';  // File name for the download
+        link.download = 'genealogy_tree.png';  # File name for the download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -848,4 +852,4 @@ clientside_callback(
 )
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=8051)
