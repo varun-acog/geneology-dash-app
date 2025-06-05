@@ -42,6 +42,8 @@ def csv_to_hierarchy(csv_data):
         root_desc = row.get('root desc', '')
         source_desc = row.get('source desc', '')
         ingredient_desc = row.get('ingredient description', '')
+        source_product_desc = row.get('source product desc', '')  # Added for ProductDescription
+        ingredient_desc_full = row.get('ingredient desc full', '')  # Added for IngredientDescription
         level = row.get('level', 0)
 
         # Add root node if it doesn't exist
@@ -52,7 +54,8 @@ def csv_to_hierarchy(csv_data):
                 "references": [],
                 "level": 0,  # Root is at level 0
                 "workforce": 0,
-                "Quantity": 0
+                "Quantity": 0,
+                "node_type": "root"  # Identify as root node
             }
 
         # Add source if it doesn't exist
@@ -60,10 +63,12 @@ def csv_to_hierarchy(csv_data):
             node_info[source] = {
                 "name": source,
                 "description": source_desc,
+                "product_description": source_product_desc,  # Store ProductDescription
                 "references": [],
                 "level": 1,  # Source is at level 1
                 "workforce": 0,
-                "Quantity": 0
+                "Quantity": 0,
+                "node_type": "startnode"  # Identify as startnode
             }
 
         # Add ingredient if it doesn't exist
@@ -71,10 +76,12 @@ def csv_to_hierarchy(csv_data):
             node_info[ingredient] = {
                 "name": ingredient,
                 "description": ingredient_desc,
+                "ingredient_description": ingredient_desc_full,  # Store IngredientDescription
                 "references": [],
                 "level": level,  # Use the Level from the data
                 "workforce": 0,
-                "Quantity": 0
+                "Quantity": 0,
+                "node_type": "endnode"  # Identify as endnode
             }
 
         # Track relationships: root -> source and source -> ingredient
@@ -94,7 +101,8 @@ def csv_to_hierarchy(csv_data):
             "references": [],
             "level": 0,
             "workforce": 0,
-            "Quantity": 0
+            "Quantity": 0,
+            "node_type": "root"  # Virtual root
         }
         for root in unique_roots:
             relationships.append((root_name, root))
@@ -112,7 +120,8 @@ def csv_to_hierarchy(csv_data):
         "id": root_name,
         "level": node_info[root_name]["level"],
         "workforce": node_info[root_name]["workforce"],
-        "Quantity": node_info[root_name]["Quantity"]
+        "Quantity": node_info[root_name]["Quantity"],
+        "node_type": node_info[root_name]["node_type"]
     }
 
     # Build a map of parent -> children
@@ -137,12 +146,15 @@ def csv_to_hierarchy(csv_data):
                 child_node = {
                     "name": node_info[child_id]["name"],
                     "description": node_info[child_id]["description"],
+                    "product_description": node_info[child_id].get("product_description", ""),  # Include ProductDescription
+                    "ingredient_description": node_info[child_id].get("ingredient_description", ""),  # Include IngredientDescription
                     "children": [],
                     "shared": len(node_info[child_id]["references"]) > 1,
                     "id": child_id,
                     "level": node_info[child_id]["level"],
                     "workforce": node_info[child_id]["workforce"],
-                    "Quantity": node_info[child_id]["Quantity"]
+                    "Quantity": node_info[child_id]["Quantity"],
+                    "node_type": node_info[child_id]["node_type"]  # Include node_type
                 }
                 parent_node["children"].append(child_node)
                 build_tree(child_id, child_node, visited)  # Recursive call with visited set
@@ -283,7 +295,7 @@ defaultColDef = {
     "resizable": True,
     "editable": False,
     "minWidth": 100,
-    "headerStyle": {"backgroundColor": "#2c3e50", "color": "#ffffff", "fontWeight": "600", "fontSize": "13px"}
+    "headerStyle": {"backgroundColor": "black", "color": "#ffffff", "fontWeight": "600", "fontSize": "13px"}
 }
 
 # Define the layout
@@ -294,7 +306,7 @@ app.layout = html.Div([
     
     # Store components for data management
     dcc.Store(id="all-data-store"),
-    dcc.Store(id="filtered-data-store"),
+    dcc.Store(id="filtered-data-table"),
     
     # Main container
     html.Div([
@@ -437,9 +449,9 @@ app.layout = html.Div([
                         dag.AgGrid(
                             id='data-table',
                             columnDefs=columnDefs,
-                            rowData=[],  # Set initial rowData to empty list to hide table
+                            rowData=[],
                             defaultColDef=defaultColDef,
-                            style={'height': '400px', 'width': '100%'},
+                            style={'heightает-->:400px', 'width': '100%'},
                             dashGridOptions={
                                 "pagination": True,
                                 "paginationPageSize": 20,
@@ -447,16 +459,14 @@ app.layout = html.Div([
                                 "suppressCsvExport": False,
                             },
                             className="ag-theme-alpine",
-                            enableEnterpriseModules=False,  # Use community features
-                        )
-                    ]
-                )
+                            )
+                    ])
             ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
             
             # Export buttons
             html.Div([
                 html.Div([
-                    html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'marginBottom': '10px'}),
+                    html.Button("Export Genealogy", id="export-genealogy-button", style={'-->:--button', 'marginBottom': '10px'}),
                     html.Button("Export with Required Data", id="export-filtered-button", style=styles['primaryButton'])
                 ])
             ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
@@ -510,6 +520,8 @@ def update_tree_chart(data):
         'root desc': df['ParentName'],  # ParentName
         'source desc': df['ProductName'],  # ProductName
         'ingredient description': df['IngredientName'],  # IngredientName
+        'source product desc': df['ProductDescription'],  # ProductDescription
+        'ingredient desc full': df['IngredientDescription'],  # IngredientDescription
         'level': df['Level'],  # Use Level to determine hierarchy depth
     })
 
@@ -527,7 +539,19 @@ def update_tree_chart(data):
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
-            "formatter": "{b}<br/>"
+            "formatter": """function(params) {
+                var name = params.data.name || 'N/A';
+                var nodeType = params.data.node_type || 'root';
+                var desc = '';
+                if (nodeType === 'startnode') {
+                    desc = params.data.product_description || 'No description';
+                } else if (nodeType === 'endnode') {
+                    desc = params.data.ingredient_description || 'No description';
+                } else {
+                    desc = params.data.description || 'N/A';
+                }
+                return 'Node: ' + name + '<br/>Description: ' + desc;
+            }"""
         },
         "series": [
             {
@@ -649,6 +673,8 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
                     'IngredientItemCode': row.get('ingredient_itemcode', ''),
                     'IngredientName': row.get('IngredientName', ''),
                     'IngredientPN': row.get('endnode', ''),
+                    'ProductDescription': row.get('ProductDescription', ''),  # Added for tree chart
+                    'IngredientDescription': row.get('IngredientDescription', ''),  # Added for tree chart
                     'CntRecs': row.get('CntRecs', 0)  # Default to 0 if CntRecs is missing
                 }
                 mapped_data.append(mapped_row)
@@ -854,4 +880,4 @@ clientside_callback(
 )
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=8051)
