@@ -102,6 +102,14 @@ TypeError: Cannot read properties of undefined (reading '240be9b4aac9999f5910fa2
 
     at http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:299
 
+
+Duplicate callback outputs
+11:31:58 AM
+In the callback for output(s): filtered-data-store.data Output 0 (filtered-data-store.data) is already in use. To resolve this, set `allow_duplicate=True` on duplicate outputs, or combine the outputs into one callback function, distinguishing the trigger by using `dash.callback_context` if necessary.
+Duplicate callback outputs
+11:31:58 AM
+In the callback for output(s): from-dropdown.value to-dropdown.value data-table.rowData@307b61fbf4f3aae5ecf09f88b4f7760fa7455969a6bc5727b1efdd0ad0e13006 all-data-store.data filtered-data-store.data unit-operation-dropdown.value attribute-dropdown.value Output 3 (all-data-store.data) is already in use. To resolve this, set `allow_duplicate=True` on duplicate outputs, or combine the outputs into one callback function, distinguishing the trigger by using `dash.callback_context` if necessary.
+
     at new Promise (<anonymous>)
 
     at http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:90
