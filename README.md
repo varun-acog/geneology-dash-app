@@ -112,9 +112,12 @@ Error getting lineage data: Binder Error: Column "CntRecs" referenced that exist
 
 Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemcode', 'endnode', 'ingredient_itemcode', 'Level', 'ParentName', 'ProductName', 'IngredientName', 'ParentDescription', 'ProductDescription', 'IngredientDescription', 'CntRecs', 'CntRecs_1']
 
-
+  File "/home/users/pr912591/Lineage/Lineage/app2.py", line 454
+    style={'heightает-->:400px', 'width': '100%'},
+                                        ^
+SyntaxError: invalid syntax
 (geneology) [pr912591@hpcapps Lineage]$ python app2.py
-  File "/home/users/pr912591/Lineage/Lineage/app2.py", line 119
-    gradient_to_children = {}
-                             ^
-IndentationError: unindent does not match any outer indentation level
+  File "/home/users/pr912591/Lineage/Lineage/app2.py", line 469
+    html.Button("Export Genealogy", id="export-genealogy-button", style={'-->:--button', 'marginBottom': '10px'}),
+                                                                                                       ^
+SyntaxError: invalid syntax
