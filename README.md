@@ -109,3 +109,5 @@ Dash is running on http://127.0.0.1:8050/
  * Serving Flask app 'app2'
  * Debug mode: on
 Error getting lineage data: Binder Error: Column "CntRecs" referenced that exists in the SELECT clause - but this column cannot be referenced before it is defined
+
+Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemcode', 'endnode', 'ingredient_itemcode', 'Level', 'ParentName', 'ProductName', 'IngredientName', 'ParentDescription', 'ProductDescription', 'IngredientDescription', 'CntRecs', 'CntRecs_1']
