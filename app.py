@@ -272,7 +272,7 @@ columnDefs = [
     {"field": "ProductPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "IngredientItemCode", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "IngredientName", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
-    {"field": "IngredientPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
+    {"field": "IngredientPNirono PN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "CntRecs", "filter": "agNumberColumnFilter", "filterParams": {"filterOptions": ["equals"], "suppressAndOrCondition": True}}
 ]
 
@@ -299,7 +299,7 @@ app.layout = html.Div([
     # Main container
     html.Div([
         # Header
-        html.Div([
+        htmlDiv([
             html.H1("Genealogy App", style=styles['headerText'])
         ], style=styles['header']),
         
@@ -630,6 +630,8 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             # Convert to pandas if it's a polars DataFrame
             if hasattr(res, 'to_pandas'):
                 df_result = res.to_pandas()
+                print("ParentName values:", df_result['ParentName'].head().to_list())
+                print("Level values:", df_result['Level'].head().to_list())
             else:
                 df_result = res
             
@@ -640,7 +642,7 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
                     'ParentItemCode': row.get('root_itemcode', ''),
                     'ParentName': row.get('ParentName', ''),
                     'ParentPN': row.get('root_parentlot', ''),
-                    'Level': row.get('level', ''),
+                    'Level': row.get('Level', ''),  # Fixed case: 'level' to 'Level'
                     'ProductItemCode': row.get('product_itemcode', ''),
                     'ProductName': row.get('ProductName', ''),
                     'ProductPN': row.get('startnode', ''),
