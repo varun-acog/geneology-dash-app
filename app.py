@@ -309,24 +309,36 @@ app.layout = html.Div([
             html.Div([
                 html.H4("Filters", style=styles['sectionTitle']),
                 
-                # FROM and TO inputs
+                # FROM and TO inputs with loading states
                 html.Div([
                     html.Div([
-                        dcc.Dropdown(
-                            id='from-dropdown',
-                            multi=True,
-                            clearable=False,
-                            placeholder='FROM',
-                            style=styles['dropdown']
+                        dcc.Loading(
+                            id="loading-from-dropdown",
+                            type="default",
+                            children=[
+                                dcc.Dropdown(
+                                    id='from-dropdown',
+                                    multi=True,
+                                    clearable=False,
+                                    placeholder='FROM',
+                                    style=styles['dropdown']
+                                )
+                            ]
                         )
                     ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%'}),
                     html.Div([
-                        dcc.Dropdown(
-                            id='to-dropdown',
-                            placeholder='TO',
-                            multi=True,
-                            clearable=False,
-                            style=styles['dropdown']
+                        dcc.Loading(
+                            id="loading-to-dropdown",
+                            type="default",
+                            children=[
+                                dcc.Dropdown(
+                                    id='to-dropdown',
+                                    placeholder='TO',
+                                    multi=True,
+                                    clearable=False,
+                                    style=styles['dropdown']
+                                )
+                            ]
                         )
                     ], style={'width': '48%', 'display': 'inline-block'})
                 ], style={'marginBottom': '15px'}),
@@ -426,24 +438,30 @@ app.layout = html.Div([
             ])
         ], style=styles['section']),
         
-        # Data section
+        # Data section with loading state
         html.Div([
             html.Div([
                 html.H4("Data", style=styles['sectionTitle']),
-                dag.AgGrid(
-                    id='data-table',
-                    columnDefs=columnDefs,
-                    rowData=[],  # Set initial rowData to empty list to hide table
-                    defaultColDef=defaultColDef,
-                    style={'height': '400px', 'width': '100%'},
-                    dashGridOptions={
-                        "pagination": True,
-                        "paginationPageSize": 20,
-                        "suppressExcelExport": False,
-                        "suppressCsvExport": False,
-                    },
-                    className="ag-theme-alpine",
-                    enableEnterpriseModules=False,  # Use community features
+                dcc.Loading(
+                    id="loading-data-table",
+                    type="default",
+                    children=[
+                        dag.AgGrid(
+                            id='data-table',
+                            columnDefs=columnDefs,
+                            rowData=[],  # Set initial rowData to empty list to hide table
+                            defaultColDef=defaultColDef,
+                            style={'height': '400px', 'width': '100%'},
+                            dashGridOptions={
+                                "pagination": True,
+                                "paginationPageSize": 20,
+                                "suppressExcelExport": False,
+                                "suppressCsvExport": False,
+                            },
+                            className="ag-theme-alpine",
+                            enableEnterpriseModules=False,  # Use community features
+                        )
+                    ]
                 )
             ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
             
@@ -615,8 +633,8 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
         res = get_lineage(varTraceFor, varTraceTarget, outputType, GenOrTrc, level, 
                          outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
                                         root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
-                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription
-                                        """)
+                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription,
+                                        CntRecs""")
         
         print("Database result:", res)
         print("Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
@@ -633,15 +651,15 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             mapped_data = []
             for _, row in df_result.iterrows():
                 mapped_row = {
-                    'ParentItemCode': row.get('root_parentlot', ''),
-                    'ParentName': row.get('root_parentlot', ''),
+                    'ParentItemCode': row.get('root_itemcode', ''),
+                    'ParentName': row.get('ParentName', ''),
                     'ParentPN': row.get('root_parentlot', ''),
-                    'Level': row.get('Level', ''),
-                    'ProductItemCode': row.get('startnode', ''),
-                    'ProductName': row.get('startnode', ''),
+                    'Level': row.get('level', ''),
+                    'ProductItemCode': row.get('product_itemcode', ''),
+                    'ProductName': row.get('ProductName', ''),
                     'ProductPN': row.get('startnode', ''),
-                    'IngredientItemCode': row.get('endnode', ''),
-                    'IngredientName': row.get('endnode', ''),
+                    'IngredientItemCode': row.get('ingredient_itemcode', ''),
+                    'IngredientName': row.get('IngredientName', ''),
                     'IngredientPN': row.get('endnode', ''),
                     'CntRecs': row.get('CntRecs', '')
                 }
@@ -774,15 +792,15 @@ def export_filtered_data(n_clicks, filtered_data):
             return dash.no_update
     else:
         print("No filtered data available")
-        return dash.no_update
+        return None
 
 # Callback for Clear button
 @app.callback(
     [Output('from-dropdown', 'value'),
      Output('to-dropdown', 'value'),
      Output('data-table', 'rowData', allow_duplicate=True),
-     Output('all-data-store', 'data', allow_duplicate=True),
-     Output('filtered-data-store', 'data', allow_duplicate=True),
+     Output('all-data-store', 'data'),
+     Output('filtered-data-store', 'data'),
      Output('unit-operation-dropdown', 'value'),
      Output('attribute-dropdown', 'value')],
     [Input('clear-button', 'n_clicks')],
@@ -790,8 +808,8 @@ def export_filtered_data(n_clicks, filtered_data):
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], [], [], None, None  # Reset everything to empty
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return [], [], [], [], [], None, None  # Reset everything to empty
+    return []
 
 # Clientside callback to download the ECharts tree chart as PNG
 clientside_callback(
@@ -822,7 +840,7 @@ clientside_callback(
         const dataURL = echartsInstance.getDataURL({
             type: 'png',
             pixelRatio: 2,  // Increase resolution for better quality
-            backgroundColor: '#fff'  // White background for the PNG
+            backgroundColor: '#fff'  # White background for the PNG
         });
 
         if (!dataURL) {
@@ -833,7 +851,7 @@ clientside_callback(
         // Create a temporary link element to trigger the download
         const link = document.createElement('a');
         link.href = dataURL;
-        link.download = 'genealogy_tree.png';  // File name for the download
+        link.download = 'genealogy_tree.png'; // File name for the download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
