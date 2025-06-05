@@ -116,7 +116,7 @@ def csv_to_hierarchy(csv_data):
     }
 
     # Build a map of parent -> children
- gradiant_to_children = {}
+    parent_to_children = {}
     for parent, child in relationships:
         if parent not in parent_to_children:
             parent_to_children[parent] = []
@@ -854,4 +854,4 @@ clientside_callback(
 )
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8051)
+    app.run(debug=True)
