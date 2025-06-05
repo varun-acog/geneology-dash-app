@@ -261,7 +261,7 @@ styles = {
     }
 }
 
-# AG Grid column definitions with filtering enabled
+# AG Grid column definitions with filtering enabled, excluding CntRecs
 columnDefs = [
     {"field": "ParentItemCode", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "ParentName", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
@@ -272,8 +272,7 @@ columnDefs = [
     {"field": "ProductPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "IngredientItemCode", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "IngredientName", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
-    {"field": "IngredientPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
-    {"field": "CntRecs", "filter": "agNumberColumnFilter", "filterParams": {"filterOptions": ["equals"], "suppressAndOrCondition": True}}
+    {"field": "IngredientPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}}
 ]
 
 # AG Grid default column properties
@@ -503,14 +502,13 @@ def update_tree_chart(data):
     df = pd.DataFrame(data)
     
     # Map columns to match csv_to_hierarchy expectations
-    # Now including root_parentlot as the root
     hierarchy_data = pd.DataFrame({
-        'root': df['ParentItemCode'],  # root_parentlot
+        'root': df['ParentItemCode'],  # root_itemcode
         'source': df['ProductItemCode'],  # startnode
         'ingredient': df['IngredientItemCode'],  # endnode
-        'root desc': df['ParentName'],  # root_parentlot (same as ParentItemCode)
-        'source desc': df['ProductName'],  # startnode (same as ProductItemCode)
-        'ingredient description': df['IngredientName'],  # endnode (same as IngredientItemCode)
+        'root desc': df['ParentName'],  # ParentName
+        'source desc': df['ProductName'],  # ProductName
+        'ingredient description': df['IngredientName'],  # IngredientName
         'level': df['Level'],  # Use Level to determine hierarchy depth
     })
 
@@ -616,12 +614,11 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
         GenOrTrc = "all"  # "trc", "gen", or "all"
         level = -99  # -99 for all levels, 1 for first level, etc.
         
-        # Fetch data with the specified output columns
+        # Fetch data with the specified output columns, excluding CntRecs
         res = get_lineage(varTraceFor, varTraceTarget, outputType, GenOrTrc, level, 
                          outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
                                         root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
-                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription,
-                                        CntRecs""")
+                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription""")
         
         print("Database result:", res)
         print("Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
@@ -647,8 +644,7 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
                     'ProductPN': row.get('startnode', ''),
                     'IngredientItemCode': row.get('ingredient_itemcode', ''),
                     'IngredientName': row.get('IngredientName', ''),
-                    'IngredientPN': row.get('endnode', ''),
-                    'CntRecs': row.get('CntRecs', '')
+                    'IngredientPN': row.get('endnode', '')
                 }
                 mapped_data.append(mapped_row)
             
