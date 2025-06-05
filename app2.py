@@ -1,5 +1,6 @@
 import dash
 from dash import dcc, html, Input, Output, callback, State, clientside_callback
+from dash_echarts import DashECharts
 import dash_ag_grid as dag
 import plotly.graph_objects as go
 import plotly.express as px
@@ -10,12 +11,10 @@ from Lineage import get_item_codes
 from dash.exceptions import PreventUpdate
 from Lineage import get_lineage
 
-# Function to create a network visualization graph (currently using static data)
+# Function to create a network visualization graph (currently unused, replaced by ECharts)
 def create_network_graph():
     """Create a network visualization graph"""
     fig = go.Figure()
-    
-    # Placeholder for network visualization (can be updated later to use real data)
     fig.update_layout(
         showlegend=False,
         hovermode='closest',
@@ -25,8 +24,133 @@ def create_network_graph():
         plot_bgcolor='white',
         paper_bgcolor='white'
     )
-    
     return fig
+
+# Modified csv_to_hierarchy function to handle root_parentlot as the root and prevent cycles
+def csv_to_hierarchy(csv_data):
+    # Dictionary to track nodes with their metadata
+    node_info = {}
+
+    # Track all relationships
+    relationships = []
+
+    # First pass: create all nodes with their metadata
+    for _, row in csv_data.iterrows():
+        root = row['root']
+        source = row['source']
+        ingredient = row['ingredient']
+        root_desc = row.get('root desc', '')
+        source_desc = row.get('source desc', '')
+        ingredient_desc = row.get('ingredient description', '')
+        level = row.get('level', 0)
+
+        # Add root node if it doesn't exist
+        if root not in node_info:
+            node_info[root] = {
+                "name": root,
+                "description": root_desc,
+                "references": [],
+                "level": 0,  # Root is at level 0
+                "workforce": 0,
+                "Quantity": 0
+            }
+
+        # Add source if it doesn't exist
+        if source not in node_info:
+            node_info[source] = {
+            "name": source,
+            "description": source_desc,
+            "references": [],
+            "level": 1,  # Source is at level 1
+            "workforce": 0,
+            "Quantity": 0
+            }
+
+        # Add ingredient if it doesn't exist
+        if ingredient not in node_info:
+            node_info[ingredient] = {
+                "name": ingredient,
+                "description": ingredient_desc,
+                "references": [],
+                "level": level,  # Use the Level from the data
+                "workforce": 0,
+                "Quantity": 0
+            }
+
+        # Track relationships: root -> source and source -> ingredient
+        relationships.append((root, source))
+        relationships.append((source, ingredient))
+        node_info[source]["references"].append(root)
+        node_info[ingredient]["references"].append(source)
+
+    # Build the tree starting from unique root nodes
+    unique_roots = csv_data['root'].unique()
+    if len(unique_roots) > 1:
+        # Create a virtual root if there are multiple root_parentlot values
+        root_name = "All Processes"
+        node_info[root_name] = {
+            "name": root_name,
+            "description": "All Manufacturing Processes",
+            "references": [],
+            "level": 0,
+            "workforce": 0,
+            "Quantity": 0
+        }
+        for root in unique_roots:
+            relationships.append((root_name, root))
+            node_info[root]["references"].append(root_name)
+        root_name = root_name
+    else:
+        root_name = unique_roots[0]
+
+    # Build the tree
+    tree = {
+        "name": node_info[root_name]["name"],
+        "description": node_info[root_name]["description"],
+        "children": [],
+        "shared": False,
+        "id": root_name,
+        "level": node_info[root_name]["level"],
+        "workforce": node_info[root_name]["workforce"],
+        "Quantity": node_info[root_name]["Quantity"]
+    }
+
+    # Build a map of parent -> children
+    parent_to_children = {}
+    for parent, child in relationships:
+        if parent not in parent_to_children:
+            parent_to_children[parent] = []
+        parent_to_children[parent].append(child)
+
+    # Helper function to recursively build the tree with cycle detection
+    def build_tree(node_id, parent_node, visited=None):
+        if visited is None:
+            visited = set()  # Initialize visited set on first call
+        
+        if node_id in visited:
+            return  # Skip if node has already been visited (cycle detected)
+        
+        visited.add(node_id)  # Mark the current node as visited
+        
+        if node_id in parent_to_children:
+            for child_id in parent_to_children[node_id]:
+                child_node = {
+                    "name": node_info[child_id]["name"],
+                    "description": node_info[child_id]["description"],
+                    "children": [],
+                    "shared": len(node_info[child_id]["references"]) > 1,
+                    "id": child_id,
+                    "level": node_info[child_id]["level"],
+                    "workforce": node_info[child_id]["workforce"],
+                    "Quantity": node_info[child_id]["Quantity"]
+                }
+                parent_node["children"].append(child_node)
+                build_tree(child_id, child_node, visited)  # Recursive call with visited set
+
+    # Start building from the root
+    build_tree(root_name, tree)
+
+    return tree
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
@@ -279,19 +403,25 @@ app.layout = html.Div([
             ], style={'width': '65%', 'display': 'inline-block', 'verticalAlign': 'top'})
         ], style=styles['section']),
         
-        # Visualization section
+        # Visualization section with ECharts tree chart and loading state
         html.Div([
             html.Div([
                 html.H4("Visualization", style=styles['sectionTitle']),
-                # Export button in a separate div, aligned to the right
+                # Export button with an ID
                 html.Div([
-                    html.Button("Export", style=styles['exportButton'])
+                    html.Button("Export", id="export-visualization-button", style=styles['exportButton'])
                 ], style={'textAlign': 'right', 'marginBottom': '10px'}),
-                # Graph
-                dcc.Graph(
-                    id='network-graph',
-                    figure=create_network_graph(),
-                    style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+                # Wrap ECharts tree chart in dcc.Loading
+                dcc.Loading(
+                    id="loading-tree-chart",
+                    type="default",  # Default spinner type
+                    children=[
+                        DashECharts(
+                            id='tree-chart',
+                            option={},
+                            style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+                        )
+                    ]
                 )
             ])
         ], style=styles['section']),
@@ -353,6 +483,83 @@ def update_unit_operation_options(data):
     
     return options
 
+# Callback to generate hierarchical data and update the ECharts tree chart
+@app.callback(
+    Output('tree-chart', 'option'),
+    Input('all-data-store', 'data'),
+    prevent_initial_call=True
+)
+def update_tree_chart(data):
+    if not data:
+        return {}
+
+    # Convert the table data to a DataFrame
+    df = pd.DataFrame(data)
+    
+    # Map columns to match csv_to_hierarchy expectations
+    # Now including root_parentlot as the root
+    hierarchy_data = pd.DataFrame({
+        'root': df['ParentItemCode'],  # root_parentlot
+        'source': df['ProductItemCode'],  # startnode
+        'ingredient': df['IngredientItemCode'],  # endnode
+        'root desc': df['ParentName'],  # root_parentlot (same as ParentItemCode)
+        'source desc': df['ProductName'],  # startnode (same as ProductItemCode)
+        'ingredient description': df['IngredientName'],  # endnode (same as IngredientItemCode)
+        'level': df['Level'],  # Use Level to determine hierarchy depth
+    })
+
+    # Remove rows with NaN values in root, source, or ingredient to avoid errors
+    hierarchy_data = hierarchy_data.dropna(subset=['root', 'source', 'ingredient'])
+
+    if hierarchy_data.empty:
+        return {}
+
+    # Generate the hierarchical JSON
+    tree_data = csv_to_hierarchy(hierarchy_data)
+    # print(tree_data)
+
+    # ECharts tree chart configuration
+    option = {
+        "tooltip": {
+            "trigger": "item",
+            "triggerOn": "mousemove",
+            "formatter": "{b}<br/>"
+        },
+        "series": [
+            {
+                "type": "tree",
+                "data": [tree_data],
+                "top": "1%",
+                "left": "7%",
+                "bottom": "1%",
+                "right": "20%",
+                "symbolSize": 7,
+                "label": {
+                    "position": "left",
+                    "verticalAlign": "middle",
+                    "align": "right",
+                    "fontSize": 9
+                },
+                "leaves": {
+                    "label": {
+                        "position": "right",
+                        "verticalAlign": "middle",
+                        "align": "left"
+                    }
+                },
+                "emphasis": {
+                    "focus": "descendant"
+                },
+                "expandAndCollapse": True,
+                "animationDuration": 550,
+                "animationDurationUpdate": 750,
+                "initialTreeDepth": 2  # Limit initial depth for better visibility
+            }
+        ]
+    }
+
+    return option
+
 @callback(
     Output("from-dropdown", "options"),
     Input("from-dropdown", "search_value"),
@@ -406,7 +613,10 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
         
         # Fetch data with the specified output columns
         res = get_lineage(varTraceFor, varTraceTarget, outputType, GenOrTrc, level, 
-                         outputcols="type, root_parentlot, product_parentlot as startnode, ingredient_parentlot as endnode, level")
+                         outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
+                                        root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
+                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription
+                                        """)
         
         print("Database result:", res)
         print("Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
@@ -519,30 +729,6 @@ clientside_callback(
     prevent_initial_call=True
 )
 
-# Clientside callback to trigger the server-side download callback
-clientside_callback(
-    """
-    function(n_clicks, filteredData) {
-        if (!n_clicks || n_clicks <= 0) {
-            console.log('Export button not clicked, skipping');
-            return window.dash_clientside.no_update;
-        }
-
-        if (!filteredData || filteredData.length === 0) {
-            console.log('No filtered data available to export, skipping');
-            return window.dash_clientside.no_update;
-        }
-
-        console.log('Export filtered button clicked, triggering download with', filteredData.length, 'rows');
-        return n_clicks;
-    }
-    """,
-    Output('filtered-data-store', 'modified_timestamp'),
-    [Input('export-filtered-button', 'n_clicks'),
-     State('filtered-data-store', 'data')],
-    prevent_initial_call=True
-)
-
 # Server-side callback for Export Genealogy (all data)
 @app.callback(
     Output("download-all-data", "data"),
@@ -566,11 +752,14 @@ def export_all_data(n_clicks, all_data):
 # Server-side callback for Export with Required Data (filtered data)
 @app.callback(
     Output("download-filtered-data", "data"),
-    [Input('filtered-data-store', 'modified_timestamp')],
+    [Input('export-filtered-button', 'n_clicks')],
     [State('filtered-data-store', 'data')],
     prevent_initial_call=True
 )
-def export_filtered_data(timestamp, filtered_data):
+def export_filtered_data(n_clicks, filtered_data):
+    if not n_clicks:  # Only proceed if the button was clicked
+        return dash.no_update
+
     if filtered_data is not None and len(filtered_data) > 0:
         try:
             # Convert to DataFrame
@@ -603,6 +792,60 @@ def clear_filters(n_clicks):
     if n_clicks:
         return None, None, [], [], [], None, None  # Reset everything to empty
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+
+# Clientside callback to download the ECharts tree chart as PNG
+clientside_callback(
+    """
+    function(n_clicks) {
+        if (!n_clicks || n_clicks <= 0) {
+            console.log('Export visualization button not clicked, skipping');
+            return window.dash_clientside.no_update;
+        }
+
+        console.log('Export visualization button clicked, attempting to download PNG');
+
+        // Get the ECharts component DOM element
+        const chartElement = document.getElementById('tree-chart');
+        if (!chartElement) {
+            console.error('Could not find tree-chart element');
+            return window.dash_clientside.no_update;
+        }
+
+        // Get the ECharts instance
+        const echartsInstance = window.echarts.getInstanceByDom(chartElement);
+        if (!echartsInstance) {
+            console.error('Could not find ECharts instance for tree-chart');
+            return window.dash_clientside.no_update;
+        }
+
+        // Generate the PNG data URL
+        const dataURL = echartsInstance.getDataURL({
+            type: 'png',
+            pixelRatio: 2,  // Increase resolution for better quality
+            backgroundColor: '#fff'  // White background for the PNG
+        });
+
+        if (!dataURL) {
+            console.error('Failed to generate PNG data URL');
+            return window.dash_clientside.no_update;
+        }
+
+        // Create a temporary link element to trigger the download
+        const link = document.createElement('a');
+        link.href = dataURL;
+        link.download = 'genealogy_tree.png';  // File name for the download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        console.log('PNG download triggered successfully');
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('tree-chart', 'id'),  # Dummy output to satisfy Dash callback requirement
+    [Input('export-visualization-button', 'n_clicks')],
+    prevent_initial_call=True
+)
 
 if __name__ == '__main__':
     app.run(debug=True)
