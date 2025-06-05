@@ -26,7 +26,7 @@ def create_network_graph():
     )
     return fig
 
-# Modified csv_to_hierarchy function to handle root_parentlot as the root and prevent cycles
+# Modified csv_to_hierarchy function to handle root_parentlot as the root, prevent cycles, and include descriptions
 def csv_to_hierarchy(csv_data):
     # Dictionary to track nodes with their metadata
     node_info = {}
@@ -42,6 +42,8 @@ def csv_to_hierarchy(csv_data):
         root_desc = row.get('root desc', '')
         source_desc = row.get('source desc', '')
         ingredient_desc = row.get('ingredient description', '')
+        source_product_desc = row.get('product description', '')  # ProductDescription for source
+        ingredient_desc_full = row.get('ingredient description full', '')  # IngredientDescription for ingredient
         level = row.get('level', 0)
 
         # Add root node if it doesn't exist
@@ -59,7 +61,7 @@ def csv_to_hierarchy(csv_data):
         if source not in node_info:
             node_info[source] = {
                 "name": source,
-                "description": source_desc,
+                "description": source_product_desc or source_desc,  # Use ProductDescription if available
                 "references": [],
                 "level": 1,  # Source is at level 1
                 "workforce": 0,
@@ -70,7 +72,7 @@ def csv_to_hierarchy(csv_data):
         if ingredient not in node_info:
             node_info[ingredient] = {
                 "name": ingredient,
-                "description": ingredient_desc,
+                "description": ingredient_desc_full or ingredient_desc,  # Use IngredientDescription if available
                 "references": [],
                 "level": level,  # Use the Level from the data
                 "workforce": 0,
@@ -510,6 +512,8 @@ def update_tree_chart(data):
         'root desc': df['ParentName'],  # ParentName
         'source desc': df['ProductName'],  # ProductName
         'ingredient description': df['IngredientName'],  # IngredientName
+        'product description': df.get('ProductDescription', ''),  # ProductDescription
+        'ingredient description full': df.get('IngredientDescription', ''),  # IngredientDescription
         'level': df['Level'],  # Use Level to determine hierarchy depth
     })
 
@@ -522,12 +526,16 @@ def update_tree_chart(data):
     # Generate the hierarchical JSON
     tree_data = csv_to_hierarchy(hierarchy_data)
     
-    # ECharts tree chart configuration
+    # ECharts tree chart configuration with updated tooltip
     option = {
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
-            "formatter": "{b}<br/>"
+            "formatter": """function(params) {
+                var name = params.data.name || '';
+                var description = params.data.description || 'No description available';
+                return name + '<br/>' + description;
+            }"""
         },
         "series": [
             {
@@ -647,6 +655,8 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
                     'IngredientItemCode': row.get('ingredient_itemcode', ''),
                     'IngredientName': row.get('IngredientName', ''),
                     'IngredientPN': row.get('endnode', ''),
+                    'ProductDescription': row.get('ProductDescription', ''),
+                    'IngredientDescription': row.get('IngredientDescription', ''),
                     'CntRecs': row.get('CntRecs', 0)  # Default to 0 if CntRecs is missing
                 }
                 mapped_data.append(mapped_row)
