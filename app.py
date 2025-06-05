@@ -58,12 +58,12 @@ def csv_to_hierarchy(csv_data):
         # Add source if it doesn't exist
         if source not in node_info:
             node_info[source] = {
-            "name": source,
-            "description": source_desc,
-            "references": [],
-            "level": '1',  # Source is at level 1
-            "workforce": 0,
-            "Quantity": 0
+                "name": source,
+                "description": source_desc,
+                "references": [],
+                "level": 1,  # Source is at level 1
+                "workforce": 0,
+                "Quantity": 0
             }
 
         # Add ingredient if it doesn't exist
@@ -109,7 +109,7 @@ def csv_to_hierarchy(csv_data):
         "description": node_info[root_name]["description"],
         "children": [],
         "shared": False,
-        "id": "root_name",
+        "id": root_name,
         "level": node_info[root_name]["level"],
         "workforce": node_info[root_name]["workforce"],
         "Quantity": node_info[root_name]["Quantity"]
@@ -145,7 +145,7 @@ def csv_to_hierarchy(csv_data):
                     "Quantity": node_info[child_id]["Quantity"]
                 }
                 parent_node["children"].append(child_node)
-                build_tree(child_id, child_node, visited)  # Recursive call with child node
+                build_tree(child_id, child_node, visited)  # Recursive call with visited set
 
     # Start building from the root
     build_tree(root_name, tree)
@@ -309,36 +309,24 @@ app.layout = html.Div([
             html.Div([
                 html.H4("Filters", style=styles['sectionTitle']),
                 
-                # FROM and TO inputs with loading states
+                # FROM and TO inputs without loading states
                 html.Div([
                     html.Div([
-                        dcc.Loading(
-                            id="loading-from-dropdown",
-                            type="default",
-                            children=[
-                                dcc.Dropdown(
-                                    id='from-dropdown',
-                                    multi=True,
-                                    clearable=False,
-                                    placeholder='FROM',
-                                    style=styles['dropdown']
-                                )
-                            ]
+                        dcc.Dropdown(
+                            id='from-dropdown',
+                            multi=True,
+                            clearable=False,
+                            placeholder='FROM',
+                            style=styles['dropdown']
                         )
                     ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%'}),
                     html.Div([
-                        dcc.Loading(
-                            id="loading-to-dropdown",
-                            type="default",
-                            children=[
-                                dcc.Dropdown(
-                                    id='to-dropdown',
-                                    placeholder='TO',
-                                    multi=True,
-                                    clearable=False,
-                                    style=styles['dropdown']
-                                )
-                            ]
+                        dcc.Dropdown(
+                            id='to-dropdown',
+                            placeholder='TO',
+                            multi=True,
+                            clearable=False,
+                            style=styles['dropdown']
                         )
                     ], style={'width': '48%', 'display': 'inline-block'})
                 ], style={'marginBottom': '15px'}),
@@ -534,8 +522,7 @@ def update_tree_chart(data):
 
     # Generate the hierarchical JSON
     tree_data = csv_to_hierarchy(hierarchy_data)
-    # print(tree_data)
-
+    
     # ECharts tree chart configuration
     option = {
         "tooltip": {
