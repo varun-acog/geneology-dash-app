@@ -261,7 +261,7 @@ styles = {
     }
 }
 
-# AG Grid column definitions with filtering enabled, excluding CntRecs
+# AG Grid column definitions with filtering enabled, including CntRecs
 columnDefs = [
     {"field": "ParentItemCode", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "ParentName", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
@@ -272,7 +272,8 @@ columnDefs = [
     {"field": "ProductPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "IngredientItemCode", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "IngredientName", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
-    {"field": "IngredientPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}}
+    {"field": "IngredientPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
+    {"field": "CntRecs", "filter": "agNumberColumnFilter", "filterParams": {"filterOptions": ["equals"], "suppressAndOrCondition": True}}
 ]
 
 # AG Grid default column properties
@@ -614,11 +615,12 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
         GenOrTrc = "all"  # "trc", "gen", or "all"
         level = -99  # -99 for all levels, 1 for first level, etc.
         
-        # Fetch data with the specified output columns, excluding CntRecs
+        # Fetch data with the specified output columns, including COUNT(*) as CntRecs
         res = get_lineage(varTraceFor, varTraceTarget, outputType, GenOrTrc, level, 
                          outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
                                         root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
-                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription""")
+                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription,
+                                        COUNT(*) as CntRecs""")
         
         print("Database result:", res)
         print("Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
@@ -644,7 +646,8 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
                     'ProductPN': row.get('startnode', ''),
                     'IngredientItemCode': row.get('ingredient_itemcode', ''),
                     'IngredientName': row.get('IngredientName', ''),
-                    'IngredientPN': row.get('endnode', '')
+                    'IngredientPN': row.get('endnode', ''),
+                    'CntRecs': row.get('CntRecs', 0)  # Default to 0 if CntRecs is missing
                 }
                 mapped_data.append(mapped_row)
             
