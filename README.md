@@ -111,3 +111,10 @@ Dash is running on http://127.0.0.1:8050/
 Error getting lineage data: Binder Error: Column "CntRecs" referenced that exists in the SELECT clause - but this column cannot be referenced before it is defined
 
 Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemcode', 'endnode', 'ingredient_itemcode', 'Level', 'ParentName', 'ProductName', 'IngredientName', 'ParentDescription', 'ProductDescription', 'IngredientDescription', 'CntRecs', 'CntRecs_1']
+
+
+(geneology) [pr912591@hpcapps Lineage]$ python app2.py
+  File "/home/users/pr912591/Lineage/Lineage/app2.py", line 119
+    gradient_to_children = {}
+                             ^
+IndentationError: unindent does not match any outer indentation level
