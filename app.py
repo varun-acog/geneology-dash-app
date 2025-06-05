@@ -295,7 +295,7 @@ defaultColDef = {
     "resizable": True,
     "editable": False,
     "minWidth": 100,
-    "headerStyle": {"backgroundColor": "black", "color": "#ffffff", "fontWeight": "600", "fontSize": "13px"}
+    "headerStyle": {"backgroundColor": "#2c3e50", "color": "#ffffff", "fontWeight": "600", "fontSize": "13px"}
 }
 
 # Define the layout
@@ -306,7 +306,7 @@ app.layout = html.Div([
     
     # Store components for data management
     dcc.Store(id="all-data-store"),
-    dcc.Store(id="filtered-data-table"),
+    dcc.Store(id="filtered-data-store"),
     
     # Main container
     html.Div([
@@ -449,9 +449,9 @@ app.layout = html.Div([
                         dag.AgGrid(
                             id='data-table',
                             columnDefs=columnDefs,
-                            rowData=[],
+                            rowData=[],  # Set initial rowData to empty list to hide table
                             defaultColDef=defaultColDef,
-                            style={'heightает-->:400px', 'width': '100%'},
+                            style={'height': '400px', 'width': '100%'},
                             dashGridOptions={
                                 "pagination": True,
                                 "paginationPageSize": 20,
@@ -459,14 +459,16 @@ app.layout = html.Div([
                                 "suppressCsvExport": False,
                             },
                             className="ag-theme-alpine",
-                            )
-                    ])
+                            enableEnterpriseModules=False,  # Use community features
+                        )
+                    ]
+                )
             ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
             
             # Export buttons
             html.Div([
                 html.Div([
-                    html.Button("Export Genealogy", id="export-genealogy-button", style={'-->:--button', 'marginBottom': '10px'}),
+                    html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'marginBottom': '10px'}),
                     html.Button("Export with Required Data", id="export-filtered-button", style=styles['primaryButton'])
                 ])
             ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
