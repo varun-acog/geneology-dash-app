@@ -152,6 +152,9 @@ def csv_to_hierarchy(csv_data):
     # Start building from the root
     build_tree(root_name, tree)
 
+    # Log the tree data for debugging
+    print("Tree data:", json.dumps(tree, indent=2))
+
     return tree
 
 # Initialize the Dash app
@@ -532,9 +535,10 @@ def update_tree_chart(data):
             "trigger": "item",
             "triggerOn": "mousemove",
             "formatter": """function(params) {
-                var baseTooltip = params.name + '<br/>';  // Original tooltip format: node name + line break
+                console.log('Tooltip params:', params);  // Debug: Log params to console
+                var nodeName = params.name || params.data.name || 'Unknown Node';
                 var description = params.data.description || 'No description available';
-                return baseTooltip + description;  // Append the description
+                return nodeName + '<br/>' + description;
             }"""
         },
         "series": [
@@ -771,7 +775,7 @@ def export_all_data(n_clicks, all_data):
     prevent_initial_call=True
 )
 def export_filtered_data(n_clicks, filtered_data):
-    if not n_clicks:  # Only proceed if the button was clicked
+    if not n_clicks:  # Stop if button not clicked
         return dash.no_update
 
     if filtered_data is not None and len(filtered_data) > 0:
