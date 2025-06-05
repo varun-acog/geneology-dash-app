@@ -58,12 +58,12 @@ def csv_to_hierarchy(csv_data):
         # Add source if it doesn't exist
         if source not in node_info:
             node_info[source] = {
-                "name": source,
-                "description": source_desc,
-                "references": [],
-                "level": 1,  # Source is at level 1
-                "workforce": 0,
-                "Quantity": 0
+            "name": source,
+            "description": source_desc,
+            "references": [],
+            "level": 1,  # Source is at level 1
+            "workforce": 0,
+            "Quantity": 0
             }
 
         # Add ingredient if it doesn't exist
@@ -615,8 +615,8 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
         res = get_lineage(varTraceFor, varTraceTarget, outputType, GenOrTrc, level, 
                          outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
                                         root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
-                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription,
-                                        CntRecs""")
+                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription
+                                        """)
         
         print("Database result:", res)
         print("Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
@@ -633,15 +633,15 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             mapped_data = []
             for _, row in df_result.iterrows():
                 mapped_row = {
-                    'ParentItemCode': row.get('root_itemcode', ''),
-                    'ParentName': row.get('ParentName', ''),
+                    'ParentItemCode': row.get('root_parentlot', ''),
+                    'ParentName': row.get('root_parentlot', ''),
                     'ParentPN': row.get('root_parentlot', ''),
-                    'Level': row.get('level', ''),
-                    'ProductItemCode': row.get('product_itemcode', ''),
-                    'ProductName': row.get('ProductName', ''),
+                    'Level': row.get('Level', ''),
+                    'ProductItemCode': row.get('startnode', ''),
+                    'ProductName': row.get('startnode', ''),
                     'ProductPN': row.get('startnode', ''),
-                    'IngredientItemCode': row.get('ingredient_itemcode', ''),
-                    'IngredientName': row.get('IngredientName', ''),
+                    'IngredientItemCode': row.get('endnode', ''),
+                    'IngredientName': row.get('endnode', ''),
                     'IngredientPN': row.get('endnode', ''),
                     'CntRecs': row.get('CntRecs', '')
                 }
@@ -705,7 +705,7 @@ clientside_callback(
                         break;
                     }
                 }
-                # Handle "equals" filter type for numeric columns
+                // Handle "equals" filter type for numeric columns
                 else if (filter.type === 'equals') {
                     const rowNum = parseFloat(rowValue);
                     const filterNum = parseFloat(filter.filter);
@@ -821,8 +821,8 @@ clientside_callback(
         // Generate the PNG data URL
         const dataURL = echartsInstance.getDataURL({
             type: 'png',
-            pixelRatio: 2,  # Increase resolution for better quality
-            backgroundColor: '#fff'  # White background for the PNG
+            pixelRatio: 2,  // Increase resolution for better quality
+            backgroundColor: '#fff'  // White background for the PNG
         });
 
         if (!dataURL) {
@@ -833,7 +833,7 @@ clientside_callback(
         // Create a temporary link element to trigger the download
         const link = document.createElement('a');
         link.href = dataURL;
-        link.download = 'genealogy_tree.png';  # File name for the download
+        link.download = 'genealogy_tree.png';  // File name for the download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
