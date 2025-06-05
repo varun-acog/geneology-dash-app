@@ -1,3 +1,36 @@
+Database result: shape: (16, 6)
+┌──────┬────────────────┬───────────┬──────────┬───────┬─────────┐
+│ type ┆ root_parentlot ┆ startnode ┆ endnode  ┆ Level ┆ CntRecs │
+│ ---  ┆ ---            ┆ ---       ┆ ---      ┆ ---   ┆ ---     │
+│ str  ┆ str            ┆ str       ┆ str      ┆ i32   ┆ i64     │
+╞══════╪════════════════╪═══════════╪══════════╪═══════╪═════════╡
+│ Trc  ┆ A1276211       ┆ A1292970  ┆ A1275656 ┆ 3     ┆ 1       │
+│ Trc  ┆ A1276211       ┆ A1275656  ┆ A1275880 ┆ 2     ┆ 1       │
+│ Trc  ┆ A1276211       ┆ A1275640  ┆ A1275862 ┆ 3     ┆ 18      │
+│ Trc  ┆ A1276211       ┆ A1275656  ┆ A1276211 ┆ 1     ┆ 1       │
+│ Trc  ┆ A1276211       ┆ A1275862  ┆ A1275656 ┆ 2     ┆ 1       │
+│ …    ┆ …              ┆ …         ┆ …        ┆ …     ┆ …       │
+│ Trc  ┆ A1276211       ┆ A1292970  ┆ A1275656 ┆ 2     ┆ 1       │
+│ Trc  ┆ A1276211       ┆ A1276098  ┆ A1292970 ┆ 4     ┆ 18      │
+│ Trc  ┆ A1276211       ┆ A1275641  ┆ A1275863 ┆ 4     ┆ 17      │
+│ Trc  ┆ A1276211       ┆ A1275862  ┆ A1275656 ┆ 3     ┆ 1       │
+│ Trc  ┆ A1276211       ┆ A1275863  ┆ A1275656 ┆ 2     ┆ 1       │
+└──────┴────────────────┴───────────┴──────────┴───────┴─────────┘
+Columns: ['type', 'root_parentlot', 'startnode', 'endnode', 'Level', 'CntRecs']
+
+- root_itemcode -> Parent Item Code
+	- root_parentlot -> Parent Name
+	- root_parentlot -> Parent PN
+	- product_itemcode -> Product Item Code
+	- startnode -> Product Name
+	- startnode -> Product PN
+	- level -> level
+	- ingredient_itemcode -> Ingredient Item Code
+	- endnode -> Ingredient Name
+	- endnode -> Ingredient PN
+	- CntRecs -> CntRecs
+
+
 Database result: shape: (69, 15)
 ┌──────┬────────────────┬───────────────┬───────────────┬───┬─────────────────────────┬───────────────────────────┬──────────────────────────┬─────────┐
 │ type ┆ root_parentlot ┆ root_itemcode ┆ startnode     ┆ … ┆ ParentDescription       ┆ ProductDescription        ┆ IngredientDescription    ┆ CntRecs │
