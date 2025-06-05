@@ -61,7 +61,7 @@ def csv_to_hierarchy(csv_data):
             "name": source,
             "description": source_desc,
             "references": [],
-            "level": 1,  # Source is at level 1
+            "level": '1',  # Source is at level 1
             "workforce": 0,
             "Quantity": 0
             }
@@ -109,7 +109,7 @@ def csv_to_hierarchy(csv_data):
         "description": node_info[root_name]["description"],
         "children": [],
         "shared": False,
-        "id": root_name,
+        "id": "root_name",
         "level": node_info[root_name]["level"],
         "workforce": node_info[root_name]["workforce"],
         "Quantity": node_info[root_name]["Quantity"]
@@ -145,7 +145,7 @@ def csv_to_hierarchy(csv_data):
                     "Quantity": node_info[child_id]["Quantity"]
                 }
                 parent_node["children"].append(child_node)
-                build_tree(child_id, child_node, visited)  # Recursive call with visited set
+                build_tree(child_id, child_node, visited)  # Recursive call with child node
 
     # Start building from the root
     build_tree(root_name, tree)
@@ -792,15 +792,15 @@ def export_filtered_data(n_clicks, filtered_data):
             return dash.no_update
     else:
         print("No filtered data available")
-        return None
+        return dash.no_update
 
 # Callback for Clear button
 @app.callback(
     [Output('from-dropdown', 'value'),
      Output('to-dropdown', 'value'),
      Output('data-table', 'rowData', allow_duplicate=True),
-     Output('all-data-store', 'data'),
-     Output('filtered-data-store', 'data'),
+     Output('all-data-store', 'data', allow_duplicate=True),
+     Output('filtered-data-store', 'data', allow_duplicate=True),
      Output('unit-operation-dropdown', 'value'),
      Output('attribute-dropdown', 'value')],
     [Input('clear-button', 'n_clicks')],
@@ -808,8 +808,8 @@ def export_filtered_data(n_clicks, filtered_data):
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return [], [], [], [], [], None, None  # Reset everything to empty
-    return []
+        return None, None, [], [], [], None, None  # Reset everything to empty
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 # Clientside callback to download the ECharts tree chart as PNG
 clientside_callback(
@@ -839,7 +839,7 @@ clientside_callback(
         // Generate the PNG data URL
         const dataURL = echartsInstance.getDataURL({
             type: 'png',
-            pixelRatio: 2,  // Increase resolution for better quality
+            pixelRatio: 2,  # Increase resolution for better quality
             backgroundColor: '#fff'  # White background for the PNG
         });
 
@@ -851,7 +851,7 @@ clientside_callback(
         // Create a temporary link element to trigger the download
         const link = document.createElement('a');
         link.href = dataURL;
-        link.download = 'genealogy_tree.png'; // File name for the download
+        link.download = 'genealogy_tree.png';  # File name for the download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
