@@ -30,7 +30,7 @@ def create_network_graph():
     )
     return fig
 
-# Modified csv_to_hierarchy function to use Level for hierarchy
+# Modified csv_to_hierarchy function to handle root_parentlot as the root and prevent cycles
 def csv_to_hierarchy(csv_data):
     # Dictionary to track nodes with their metadata
     node_info = {}
@@ -40,56 +40,50 @@ def csv_to_hierarchy(csv_data):
 
     # First pass: create all nodes with their metadata
     for _, row in csv_data.iterrows():
-        root = row['root']  # ParentItemCode (root_parentlot)
-        source = row['source']  # ProductItemCode (startnode)
-        ingredient = row['ingredient']  # IngredientItemCode (endnode)
+        root = row['root']
+        source = row['source']
+        ingredient = row['ingredient']
         root_desc = row.get('root desc', '')
         source_desc = row.get('source desc', '')
         ingredient_desc = row.get('ingredient description', '')
-        level = row.get('level', -1)  # Use provided Level, default to -1 if missing
+        level = row.get('level', 0)
 
         # Add root node if it doesn't exist
         if root not in node_info:
             node_info[root] = {
                 "name": root,
                 "description": root_desc,
-                "pn": row.get('ParentPN', ''),  # Store ParentPN
-                "role": "Root",
                 "references": [],
-                "level": level if level != -1 else 0,  # Use data's Level or 0
+                "level": 0,  # Root is at level 0
                 "workforce": 0,
                 "Quantity": 0
             }
 
-        # Add source (ProductPN) if it doesn't exist
+        # Add source if it doesn't exist
         if source not in node_info:
             node_info[source] = {
                 "name": source,
                 "description": source_desc,
-                "pn": row.get('ProductPN', ''),  # Store ProductPN
-                "role": "ProductPN",
                 "references": [],
-                "level": level if level != -1 else 1,  # Use data's Level or 1
+                "level": 1,  # Source is at level 1
                 "workforce": 0,
                 "Quantity": 0
             }
 
-        # Add ingredient (IngredientPN) if it doesn't exist
+        # Add ingredient if it doesn't exist
         if ingredient not in node_info:
             node_info[ingredient] = {
                 "name": ingredient,
                 "description": ingredient_desc,
-                "pn": row.get('IngredientPN', ''),  # Store IngredientPN
-                "role": "IngredientPN",
                 "references": [],
-                "level": level,  # Use provided Level
+                "level": level,  # Use the Level from the data
                 "workforce": 0,
                 "Quantity": 0
             }
 
         # Track relationships: root -> source and source -> ingredient
-        relationships.append((root, source, level))
-        relationships.append((source, ingredient, level))
+        relationships.append((root, source))
+        relationships.append((source, ingredient))
         node_info[source]["references"].append(root)
         node_info[ingredient]["references"].append(source)
 
@@ -101,15 +95,13 @@ def csv_to_hierarchy(csv_data):
         node_info[root_name] = {
             "name": root_name,
             "description": "All Manufacturing Processes",
-            "pn": "",
-            "role": "VirtualRoot",
             "references": [],
-            "level": -1,  # Virtual root above all levels
+            "level": 0,
             "workforce": 0,
             "Quantity": 0
         }
         for root in unique_roots:
-            relationships.append((root_name, root, -1))  # Virtual root at level -1
+            relationships.append((root_name, root))
             node_info[root]["references"].append(root_name)
         root_name = root_name
     else:
@@ -119,8 +111,6 @@ def csv_to_hierarchy(csv_data):
     tree = {
         "name": node_info[root_name]["name"],
         "description": node_info[root_name]["description"],
-        "pn": node_info[root_name]["pn"],
-        "role": node_info[root_name]["role"],
         "children": [],
         "shared": False,
         "id": root_name,
@@ -129,14 +119,14 @@ def csv_to_hierarchy(csv_data):
         "Quantity": node_info[root_name]["Quantity"]
     }
 
-    # Build a map of parent -> children, grouped by level
+    # Build a map of parent -> children
     parent_to_children = {}
-    for parent, child, level in relationships:
+    for parent, child in relationships:
         if parent not in parent_to_children:
             parent_to_children[parent] = []
-        parent_to_children[parent].append((child, level))
+        parent_to_children[parent].append(child)
 
-    # Helper function to recursively build the tree with cycle detection and level sorting
+    # Helper function to recursively build the tree with cycle detection
     def build_tree(node_id, parent_node, visited=None):
         if visited is None:
             visited = set()  # Initialize visited set on first call
@@ -147,14 +137,10 @@ def csv_to_hierarchy(csv_data):
         visited.add(node_id)  # Mark the current node as visited
         
         if node_id in parent_to_children:
-            # Sort children by level to ensure level-based hierarchy
-            children = sorted(parent_to_children[node_id], key=lambda x: node_info[x[0]]["level"])
-            for child_id, _ in children:
+            for child_id in parent_to_children[node_id]:
                 child_node = {
                     "name": node_info[child_id]["name"],
                     "description": node_info[child_id]["description"],
-                    "pn": node_info[child_id]["pn"],
-                    "role": node_info[child_id]["role"],
                     "children": [],
                     "shared": len(node_info[child_id]["references"]) > 1,
                     "id": child_id,
@@ -163,7 +149,7 @@ def csv_to_hierarchy(csv_data):
                     "Quantity": node_info[child_id]["Quantity"]
                 }
                 parent_node["children"].append(child_node)
-                build_tree(child_id, child_node, visited)  # Recursive call
+                build_tree(child_id, child_node, visited)  # Recursive call with visited set
 
     # Start building from the root
     build_tree(root_name, tree)
@@ -215,22 +201,22 @@ styles = {
     },
     'dropdown': {
         'width': '100%',
-        'fontSize': '16px',
+        'fontSize': '14px',
         'borderRadius': '4px',
         'marginBottom': '10px'
     },
     'input': {
         'width': '100%',
-        'height': '32px',
+        'height': '38px',
         'fontSize': '14px',
         'border': '1px solid #d1d5db',
         'borderRadius': '4px',
-        'padding': '8px 10px',
+        'padding': '0 10px',
         'boxSizing': 'border-box'
     },
     'button': {
-        'padding': '10px 16px',
-        'fontSize': '16px',
+        'padding': '8px 16px',
+        'fontSize': '14px',
         'border': 'none',
         'borderRadius': '4px',
         'cursor': 'pointer',
@@ -240,42 +226,42 @@ styles = {
         'backgroundColor': '#3498db',
         'color': '#ffffff',
         'padding': '10px 20px',
-        'fontSize': '16px',
+        'fontSize': '14px',
         'border': 'none',
-        'borderRadius': '6px',
+        'borderRadius': '4px',
         'cursor': 'pointer',
         'transition': 'background-color 0.2s',
         'width': '100%'
     },
     'checkboxLabel': {
         'fontSize': '14px',
-        'marginRight': '10px',
+        'marginRight': '15px',
         'display': 'inline-block',
         'verticalAlign': 'middle'
     },
     'checkbox': {
-        'marginRight': '0.5rem',
+        'marginRight': '5px',
         'verticalAlign': 'middle'
     },
     'exportButton': {
         'backgroundColor': '#3498db',
         'color': '#ffffff',
         'padding': '8px 24px',
-        'fontSize': '16px',
+        'fontSize': '14px',
         'border': 'none',
         'borderRadius': '4px',
         'cursor': 'pointer',
-        'transition': 'background-color 0.1s'
+        'transition': 'background-color 0.2s'
     },
     'clearButton': {
-        'backgroundColor': '#E2E7F4',
+        'backgroundColor': '#E2EAF4',
         'color': '#3498db',
         'padding': '8px 24px',
-        'fontSize': '12px',
+        'fontSize': '14px',
         'border': 'none',
         'borderRadius': '4px',
         'cursor': 'pointer',
-        'transition': '0.2s'
+        'transition': 'background-color 0.2s'
     }
 }
 
@@ -301,12 +287,7 @@ defaultColDef = {
     "resizable": True,
     "editable": False,
     "minWidth": 100,
-    "headerStyle": {
-        "backgroundColor": "#2c3e50",
-        "color": "#ffffff",
-        "fontWeight": "600",
-        "fontSize": "13px"
-    }
+    "headerStyle": {"backgroundColor": "#2c3e50", "color": "#ffffff", "fontWeight": "600", "fontSize": "13px"}
 }
 
 # Define the layout
@@ -534,9 +515,6 @@ def update_tree_chart(data):
         'source desc': df['ProductName'],  # ProductName
         'ingredient description': df['IngredientName'],  # IngredientName
         'level': df['Level'],  # Use Level to determine hierarchy depth
-        'ParentPN': df['ParentPN'],  # Add PN columns
-        'ProductPN': df['ProductPN'],
-        'IngredientPN': df['IngredientPN']
     })
 
     # Remove rows with NaN values in root, source, or ingredient to avoid errors
@@ -548,32 +526,12 @@ def update_tree_chart(data):
     # Generate the hierarchical JSON
     tree_data = csv_to_hierarchy(hierarchy_data)
     
-    # Define color mapping for levels
-    level_colors = {
-        -1: '#2c3e50',  # Virtual root (All Processes)
-        0: '#3498db',   # Level 0 (e.g., root_parentlot)
-        1: '#2ecc71',   # Level 1 (e.g., ProductPN)
-        2: '#e67e22',   # Level 2 (e.g., IngredientPN)
-        3: '#e74c3c',   # Level 3
-        4: '#9b59b6',   # Level 4
-        # Add more levels as needed
-    }
-
-    # Function to assign itemStyle based on level
-    def assign_item_style(node):
-        node['itemStyle'] = {'color': level_colors.get(node['level'], '#95a5a6')}  # Default color for undefined levels
-        for child in node.get('children', []):
-            assign_item_style(child)
-
-    # Apply itemStyle to all nodes
-    assign_item_style(tree_data)
-
     # ECharts tree chart configuration
     option = {
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
-            "formatter": "{b} (Level {c.level}, {c.role})<br/>{c.description}<br/>PN: {c.pn}"
+            "formatter": "{b}<br/>"
         },
         "series": [
             {
@@ -588,8 +546,7 @@ def update_tree_chart(data):
                     "position": "left",
                     "verticalAlign": "middle",
                     "align": "right",
-                    "fontSize": 9,
-                    "formatter": "{b} (Level {c.level})"
+                    "fontSize": 9
                 },
                 "leaves": {
                     "label": {
@@ -636,7 +593,7 @@ def update_multi_options(search_value, value):
     [
         Output('data-table', 'rowData'),
         Output('all-data-store', 'data'),
-        Output('data-table', 'filterModel'),
+        Output('data-table', 'filterModel'),  # Added to reset column filters
     ],
     [Input('submit-button', 'n_clicks')],
     [
@@ -661,7 +618,7 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             varTraceFor = "', '".join(from_val) if isinstance(from_val, list) else str(from_val)
         
         if to_val:
-            varTraceTarget = "', '".join(to_val) if isinstance(from_val, list) else str(to_val)
+            varTraceTarget = "', '".join(to_val) if isinstance(to_val, list) else str(to_val)
             
         # Get lineage data from database
         outputType = "polars"  # "polars" or "duckdb"
@@ -884,8 +841,8 @@ clientside_callback(
         // Generate the PNG data URL
         const dataURL = echartsInstance.getDataURL({
             type: 'png',
-            pixelRatio: 2,  // Increase resolution for better quality
-            backgroundColor: '#fff'  // White background for the PNG
+            pixelRatio: 2,  # Increase resolution for better quality
+            backgroundColor: '#fff'  # White background for the PNG
         });
 
         if (!dataURL) {
@@ -896,7 +853,7 @@ clientside_callback(
         // Create a temporary link element to trigger the download
         const link = document.createElement('a');
         link.href = dataURL;
-        link.download = 'genealogy_tree.png';  // File name for the download
+        link.download = 'genealogy_tree.png';  # File name for the download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
