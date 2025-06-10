@@ -215,22 +215,22 @@ styles = {
     },
     'dropdown': {
         'width': '100%',
-        'fontSize': '14px',
+        'fontSize': '16px',
         'borderRadius': '4px',
         'marginBottom': '10px'
     },
     'input': {
         'width': '100%',
-        'height': '38px',
+        'height': '32px',
         'fontSize': '14px',
         'border': '1px solid #d1d5db',
         'borderRadius': '4px',
-        'padding': '0 10px',
+        'padding': '8px 10px',
         'boxSizing': 'border-box'
     },
     'button': {
-        'padding': '8px 16px',
-        'fontSize': '14px',
+        'padding': '10px 16px',
+        'fontSize': '16px',
         'border': 'none',
         'borderRadius': '4px',
         'cursor': 'pointer',
@@ -240,42 +240,42 @@ styles = {
         'backgroundColor': '#3498db',
         'color': '#ffffff',
         'padding': '10px 20px',
-        'fontSize': '14px',
+        'fontSize': '16px',
         'border': 'none',
-        'borderRadius': '4px',
+        'borderRadius': '6px',
         'cursor': 'pointer',
         'transition': 'background-color 0.2s',
         'width': '100%'
     },
     'checkboxLabel': {
         'fontSize': '14px',
-        'marginRight': '15px',
+        'marginRight': '10px',
         'display': 'inline-block',
         'verticalAlign': 'middle'
     },
     'checkbox': {
-        'marginRight': '5px',
+        'marginRight': '0.5rem',
         'verticalAlign': 'middle'
     },
     'exportButton': {
         'backgroundColor': '#3498db',
         'color': '#ffffff',
         'padding': '8px 24px',
-        'fontSize': '14px',
+        'fontSize': '16px',
         'border': 'none',
         'borderRadius': '4px',
         'cursor': 'pointer',
-        'transition': 'background-color 0.2s'
+        'transition': 'background-color 0.1s'
     },
     'clearButton': {
-        'backgroundColor': '#E2EAF4',
+        'backgroundColor': '#E2E7F4',
         'color': '#3498db',
         'padding': '8px 24px',
-        'fontSize': '14px',
+        'fontSize': '12px',
         'border': 'none',
         'borderRadius': '4px',
         'cursor': 'pointer',
-        'transition': 'background-color 0.2s'
+        'transition': '0.2s'
     }
 }
 
@@ -301,9 +301,12 @@ defaultColDef = {
     "resizable": True,
     "editable": False,
     "minWidth": 100,
-    "headerStyle": {"backgroundColor": "#2c3e50", "color": "#ffffff", "font изображения
-
-Weight": "600", "fontSize": "13px"}
+    "headerStyle": {
+        "backgroundColor": "#2c3e50",
+        "color": "#ffffff",
+        "fontWeight": "600",
+        "fontSize": "13px"
+    }
 }
 
 # Define the layout
@@ -658,7 +661,7 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             varTraceFor = "', '".join(from_val) if isinstance(from_val, list) else str(from_val)
         
         if to_val:
-            varTraceTarget = "', '".join(to_val) if isinstance(to_val, list) else str(to_val)
+            varTraceTarget = "', '".join(to_val) if isinstance(from_val, list) else str(to_val)
             
         # Get lineage data from database
         outputType = "polars"  # "polars" or "duckdb"
@@ -881,8 +884,8 @@ clientside_callback(
         // Generate the PNG data URL
         const dataURL = echartsInstance.getDataURL({
             type: 'png',
-            pixelRatio: 2,  # Increase resolution for better quality
-            backgroundColor: '#fff'  # White background for the PNG
+            pixelRatio: 2,  // Increase resolution for better quality
+            backgroundColor: '#fff'  // White background for the PNG
         });
 
         if (!dataURL) {
@@ -893,7 +896,7 @@ clientside_callback(
         // Create a temporary link element to trigger the download
         const link = document.createElement('a');
         link.href = dataURL;
-        link.download = 'genealogy_tree.png';  # File name for the download
+        link.download = 'genealogy_tree.png';  // File name for the download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
