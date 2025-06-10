@@ -590,18 +590,24 @@ def update_multi_options(search_value, value):
 
 # Callback for interactive filtering - triggered by Submit button
 @app.callback(
-    [Output('data-table', 'rowData'),
-     Output('all-data-store', 'data')],
+    [
+        Output('data-table', 'rowData'),
+        Output('all-data-store', 'data'),
+        Output('data-table', 'filterModel'),  # Added to reset column filters
+    ],
     [Input('submit-button', 'n_clicks')],
-    [State('from-dropdown', 'value'),
-     State('to-dropdown', 'value'),
-     State('unit-operation-dropdown', 'value'),
-     State('attribute-dropdown', 'value')]
+    [
+        State('from-dropdown', 'value'),
+        State('to-dropdown', 'value'),
+        State('unit-operation-dropdown', 'value'),
+        State('attribute-dropdown', 'value')
+    ],
+    prevent_initial_call=True
 )
 def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
     # Only process if Submit button was clicked and at least one value is provided
     if not n_clicks or (not from_val and not to_val):
-        return [], []  # Return empty list to keep table hidden if no submission
+        return [], [], {}  # Return empty list for rowData, all-data-store, and clear filterModel
     
     try:
         # Prepare parameters for get_lineage function
@@ -612,21 +618,25 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             varTraceFor = "', '".join(from_val) if isinstance(from_val, list) else str(from_val)
         
         if to_val:
-            varTraceTarget = "', '".join(to_val) if isinstance(from_val, list) else str(to_val)
+            varTraceTarget = "', '".join(to_val) if isinstance(to_val, list) else str(to_val)
             
-        
-        
         # Get lineage data from database
         outputType = "polars"  # "polars" or "duckdb"
         GenOrTrc = "gen"  # "trc", "gen", or "all"
         level = -99  # -99 for all levels, 1 for first level, etc.
         
         # Fetch data with the specified output columns, including COUNT(*) as CntRecs
-        res = get_lineage(varTraceFor, varTraceTarget, outputType, GenOrTrc, level, 
-                         outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
-                                        root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
-                                        root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription,
-                                        COUNT(*) as CntRecs""")
+        res = get_lineage(
+            varTraceFor,
+            varTraceTarget,
+            outputType,
+            GenOrTrc,
+            level,
+            outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
+                          root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
+                          root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription,
+                          COUNT(*) as CntRecs""",
+        )
         
         print("Database result:", res)
         print("Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
@@ -648,14 +658,14 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
                     'ParentItemCode': row.get('root_itemcode', ''),
                     'ParentName': row.get('ParentDescription', ''),
                     'ParentPN': row.get('root_parentlot', ''),
-                    'Level': row.get('Level', ''),  # Fixed case: 'level' to 'Level'
+                    'Level': row.get('Level', ''),
                     'ProductItemCode': row.get('product_itemcode', ''),
                     'ProductName': row.get('ProductDescription', ''),
                     'ProductPN': row.get('startnode', ''),
                     'IngredientItemCode': row.get('ingredient_itemcode', ''),
                     'IngredientName': row.get('IngredientDescription', ''),
                     'IngredientPN': row.get('endnode', ''),
-                    'CntRecs': row.get('CntRecs', 0)  # Default to 0 if CntRecs is missing
+                    'CntRecs': row.get('CntRecs', 0),
                 }
                 mapped_data.append(mapped_row)
             
@@ -667,17 +677,15 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
                     if (row['ProductItemCode'] in unit_operation_val or row['IngredientItemCode'] in unit_operation_val)
                 ]
             
-            # For now, Attribute dropdown is empty, so no filtering based on attribute_val
-            # If attribute_val is used in the future, add similar filtering logic here
-            
-            return filtered_data, mapped_data  # Return filtered data for table, original data for store
+            # Reset the filterModel to clear all column filters
+            return filtered_data, mapped_data, {}  # Return filtered data, original data, and empty filterModel
         else:
             print("No data returned from database")
-            return [], []  # Return empty list to keep table hidden if no results
+            return [], [], {}  # Return empty lists and clear filterModel if no results
             
     except Exception as e:
         print(f"Error getting lineage data: {e}")
-        return [], []  # Return empty list on error to keep table hidden
+        return [], [], {}  # Return empty lists and clear filterModel on error
 
 # Clientside callback to update filtered data whenever the filter changes
 clientside_callback(
