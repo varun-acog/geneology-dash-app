@@ -11,6 +11,10 @@ from Lineage import get_item_codes
 from dash.exceptions import PreventUpdate
 from Lineage import get_lineage
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Function to create a network visualization graph (currently unused, replaced by ECharts)
 def create_network_graph():
     """Create a network visualization graph"""
@@ -37,13 +41,11 @@ def csv_to_hierarchy(csv_data):
     # First pass: create all nodes with their metadata
     for _, row in csv_data.iterrows():
         root = row['root']
-        source = row['source']  # ProductPN (startnode)
-        ingredient = row['ingredient']  # IngredientPN (endnode)
+        source = row['source']
+        ingredient = row['ingredient']
         root_desc = row.get('root desc', '')
         source_desc = row.get('source desc', '')
         ingredient_desc = row.get('ingredient description', '')
-        source_product_desc = row.get('source product desc', '')  # ProductDescription for startnode
-        ingredient_desc_full = row.get('ingredient desc full', '')  # IngredientDescription for endnode
         level = row.get('level', 0)
 
         # Add root node if it doesn't exist
@@ -52,34 +54,31 @@ def csv_to_hierarchy(csv_data):
                 "name": root,
                 "description": root_desc,
                 "references": [],
-                "level": 0,
+                "level": 0,  # Root is at level 0
                 "workforce": 0,
-                "Quantity": 0,
-                "node_type": "root"
+                "Quantity": 0
             }
 
-        # Add source (startnode/ProductPN) if it doesn't exist
+        # Add source if it doesn't exist
         if source not in node_info:
             node_info[source] = {
                 "name": source,
-                "description": source_product_desc,  # Use ProductDescription
+                "description": source_desc,
                 "references": [],
-                "level": 1,
+                "level": 1,  # Source is at level 1
                 "workforce": 0,
-                "Quantity": 0,
-                "node_type": "startnode"
+                "Quantity": 0
             }
 
-        # Add ingredient (endnode/IngredientPN) if it doesn't exist
+        # Add ingredient if it doesn't exist
         if ingredient not in node_info:
             node_info[ingredient] = {
                 "name": ingredient,
-                "description": ingredient_desc_full,  # Use IngredientDescription
+                "description": ingredient_desc,
                 "references": [],
-                "level": level,
+                "level": level,  # Use the Level from the data
                 "workforce": 0,
-                "Quantity": 0,
-                "node_type": "endnode"
+                "Quantity": 0
             }
 
         # Track relationships: root -> source and source -> ingredient
@@ -99,8 +98,7 @@ def csv_to_hierarchy(csv_data):
             "references": [],
             "level": 0,
             "workforce": 0,
-            "Quantity": 0,
-            "node_type": "root"
+            "Quantity": 0
         }
         for root in unique_roots:
             relationships.append((root_name, root))
@@ -118,8 +116,7 @@ def csv_to_hierarchy(csv_data):
         "id": root_name,
         "level": node_info[root_name]["level"],
         "workforce": node_info[root_name]["workforce"],
-        "Quantity": node_info[root_name]["Quantity"],
-        "node_type": node_info[root_name]["node_type"]
+        "Quantity": node_info[root_name]["Quantity"]
     }
 
     # Build a map of parent -> children
@@ -149,8 +146,7 @@ def csv_to_hierarchy(csv_data):
                     "id": child_id,
                     "level": node_info[child_id]["level"],
                     "workforce": node_info[child_id]["workforce"],
-                    "Quantity": node_info[child_id]["Quantity"],
-                    "node_type": node_info[child_id]["node_type"]
+                    "Quantity": node_info[child_id]["Quantity"]
                 }
                 parent_node["children"].append(child_node)
                 build_tree(child_id, child_node, visited)  # Recursive call with visited set
@@ -284,7 +280,7 @@ columnDefs = [
     {"field": "CntRecs", "filter": "agNumberColumnFilter", "filterParams": {"filterOptions": ["equals"], "suppressAndOrCondition": True}}
 ]
 
-# AG Grid default properties
+# AG Grid default column properties
 defaultColDef = {
     "sortable": True,
     "filter": True,
@@ -360,9 +356,9 @@ app.layout = html.Div([
                     html.Div([
                         html.Button("Submit", id="submit-button", style=styles['exportButton']),
                         html.Button("Clear", id="clear-button", style=styles['clearButton'])
-                    ], style={'text-align': 'right', 'marginBottom': '10px'}),
+                    ], style={'textAlign': 'right', 'marginBottom': '10px'}),
                 ])
-            ], style={'width': '30%', 'display': 'inline-block', 'vertical-align': 'top', 'paddingRight': '20px'}),
+            ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px'}),
             
             # Right side - Data Required and Additional Filters (side by side)
             html.Div([
@@ -385,7 +381,7 @@ app.layout = html.Div([
                             inputStyle=styles['checkbox']
                         )
                     ])
-                ], style={'width': '48%', 'display': 'inline-block', 'vertical-align': 'top', 'margin-right': '4%'}),
+                ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '4%'}),
                 
                 # Additional Filters (stacked vertically)
                 html.Div([
@@ -403,12 +399,12 @@ app.layout = html.Div([
                             multi=True,
                             clearable=True,
                             placeholder='Attribute',
-                            style=options=[]  # Keep Attribute dropdown empty as requested
-                            )
-                        ])
+                            style=styles['dropdown'],
+                            options=[]  # Keep Attribute dropdown empty as requested
+                        )
                     ])
-                ], style={'width': '48%', 'display': 'inline-block', 'vertical-align': 'top'}
-            ], style={'width': '65%', 'display': 'inline-block', 'vertical-align': 'top'})
+                ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'})
+            ], style={'width': '65%', 'display': 'inline-block', 'verticalAlign': 'top'})
         ], style=styles['section']),
         
         # Visualization section with ECharts tree chart and loading state
@@ -418,7 +414,7 @@ app.layout = html.Div([
                 # Export button with an ID
                 html.Div([
                     html.Button("Export", id="export-visualization-button", style=styles['exportButton'])
-                ], style={'text-align': 'right', 'margin-bottom': '10px'}),
+                ], style={'textAlign': 'right', 'marginBottom': '10px'}),
                 # Wrap ECharts tree chart in dcc.Loading
                 dcc.Loading(
                     id="loading-tree-chart",
@@ -427,10 +423,10 @@ app.layout = html.Div([
                         DashECharts(
                             id='tree-chart',
                             option={},
-                            style={'height': '500px', 'border': '1px solid #ecf0f1', 'border-radius': '4px'}
+                            style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
                         )
                     ]
-                ]
+                )
             ])
         ], style=styles['section']),
         
@@ -445,37 +441,37 @@ app.layout = html.Div([
                         dag.AgGrid(
                             id='data-table',
                             columnDefs=columnDefs,
-                            rowData=[],
+                            rowData=[],  # Set initial rowData to empty list to hide table
                             defaultColDef=defaultColDef,
                             style={'height': '400px', 'width': '100%'},
                             dashGridOptions={
                                 "pagination": True,
-                                "rows": 20,
+                                "paginationPageSize": 20,
                                 "suppressExcelExport": False,
                                 "suppressCsvExport": False,
                             },
                             className="ag-theme-alpine",
-                            enableEnterprise=False,
-                            )
-                        ])
-                    ])
-            ], style={'width': '70%', 'display': 'inline-block', 'padding-right': '20px'}),
+                            enableEnterpriseModules=False,  # Use community features
+                        )
+                    ]
+                )
+            ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
             
             # Export buttons
             html.Div([
                 html.Div([
-                    html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'margin-bottom': '10px'}),
-                    html.Button("Export with Required Data", id="export-filtered-button", style= styles['primaryButton'])
+                    html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'marginBottom': '10px'}),
+                    html.Button("Export with Required Data", id="export-filtered-button", style=styles['primaryButton'])
                 ])
-            ], style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'top'})
-            ])
+            ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
         ], style=styles['section'])
     ], style=styles['container'])
+])
 
 # Callback to populate Unit Operation dropdown with unique ProductItemCode and IngredientItemCode values
 @app.callback(
     Output('unit-operation-dropdown', 'options'),
-    Input('unit-data-store', 'data'),
+    Input('all-data-store', 'data'),
     prevent_initial_call=True
 )
 def update_unit_operation_options(data):
@@ -489,15 +485,15 @@ def update_unit_operation_options(data):
     product_item_codes = df['ProductItemCode'].dropna().unique()
     ingredient_item_codes = df['IngredientItemCode'].dropna().unique()
     
-    # Combine and get unique values to
+    # Combine and get unique values
     all_item_codes = set(product_item_codes).union(set(ingredient_item_codes))
     
-    # Convert to dropdown to dropdown options format
+    # Convert to dropdown options format
     options = [{'label': str(code), 'value': str(code)} for code in sorted(all_item_codes)]
     
     return options
 
-# Callback to generate hierarchical data and update the ECharts tree
+# Callback to generate hierarchical data and update the ECharts tree chart
 @app.callback(
     Output('tree-chart', 'option'),
     Input('all-data-store', 'data'),
@@ -510,22 +506,14 @@ def update_tree_chart(data):
     # Convert the table data to a DataFrame
     df = pd.DataFrame(data)
     
-    # Print sample data for debugging
-    print("Sample ProductDescription:", df['ProductDescription'].head().to_list())
-    print("Sample IngredientDescription:", df['IngredientDescription'].head().to_list())
-    print("Sample ProductPN:", df['ProductPN'].head().to_list())
-    print("Sample IngredientPN:", df['IngredientPN'].head().to_list())
-    
     # Map columns to match csv_to_hierarchy expectations
     hierarchy_data = pd.DataFrame({
         'root': df['ParentItemCode'],  # root_itemcode
-        'source': df['ProductPN'],  # startnode (ProductPN),
-        'ingredient': df['IngredientPN'],  # endnode (IngredientPN)
+        'source': df['ProductItemCode'],  # startnode
+        'ingredient': df['IngredientItemCode'],  # endnode
         'root desc': df['ParentName'],  # ParentName
         'source desc': df['ProductName'],  # ProductName
         'ingredient description': df['IngredientName'],  # IngredientName
-        'source product desc': df['ProductDescription'],  # ProductDescription for startnode
-        'ingredient desc full': df['IngredientDescription'],  # IngredientDescription for endnode
         'level': df['Level'],  # Use Level to determine hierarchy depth
     })
 
@@ -543,12 +531,7 @@ def update_tree_chart(data):
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
-            "formatter": """function(params) {
-                var name = params.data.name || 'N/A';
-                var nodeType = params.data.node_type || 'root';
-                var desc = params.data.description || 'No description';
-                return 'Node: ' + name + '<br/>Description: ' + desc;
-            }"""
+            "formatter": "{b}<br/>"
         },
         "series": [
             {
@@ -561,14 +544,14 @@ def update_tree_chart(data):
                 "symbolSize": 7,
                 "label": {
                     "position": "left",
-                    "vertical-align": "middle",
+                    "verticalAlign": "middle",
                     "align": "right",
-                    "font-size": 9
+                    "fontSize": 9
                 },
                 "leaves": {
                     "label": {
                         "position": "right",
-                        "vertical-align": "middle",
+                        "verticalAlign": "middle",
                         "align": "left"
                     }
                 },
@@ -630,10 +613,12 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
         
         if to_val:
             varTraceTarget = "', '".join(to_val) if isinstance(from_val, list) else str(to_val)
+            
+        
         
         # Get lineage data from database
         outputType = "polars"  # "polars" or "duckdb"
-        GenOrTrc = "all"  # "trc", "gen", or "all"
+        GenOrTrc = "gen"  # "trc", "gen", or "all"
         level = -99  # -99 for all levels, 1 for first level, etc.
         
         # Fetch data with the specified output columns, including COUNT(*) as CntRecs
@@ -651,10 +636,8 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             # Convert to pandas if it's a polars DataFrame
             if hasattr(res, 'to_pandas'):
                 df_result = res.to_pandas()
-                print("ParentName values:", df_result['ParentName'].head().to_list())
+                print("ParentName values:", df_result['ParentDescription'].head().to_list())
                 print("Level values:", df_result['Level'].head().to_list())
-                print("ProductDescription values:", df_result['ProductDescription'].head().to_list())
-                print("IngredientDescription values:", df_result['IngredientDescription'].head().to_list())
             else:
                 df_result = res
             
@@ -663,18 +646,16 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             for _, row in df_result.iterrows():
                 mapped_row = {
                     'ParentItemCode': row.get('root_itemcode', ''),
-                    'ParentName': row.get('ParentName', ''),
+                    'ParentName': row.get('ParentDescription', ''),
                     'ParentPN': row.get('root_parentlot', ''),
-                    'Level': row.get('Level', ''),
+                    'Level': row.get('Level', ''),  # Fixed case: 'level' to 'Level'
                     'ProductItemCode': row.get('product_itemcode', ''),
-                    'ProductName': row.get('ProductName', ''),
+                    'ProductName': row.get('ProductDescription', ''),
                     'ProductPN': row.get('startnode', ''),
                     'IngredientItemCode': row.get('ingredient_itemcode', ''),
-                    'IngredientName': row.get('IngredientName', ''),
+                    'IngredientName': row.get('IngredientDescription', ''),
                     'IngredientPN': row.get('endnode', ''),
-                    'ProductDescription': row.get('ProductDescription', ''),
-                    'IngredientDescription': row.get('IngredientDescription', ''),
-                    'CntRecs': row.get('CntRecs', 0)
+                    'CntRecs': row.get('CntRecs', 0)  # Default to 0 if CntRecs is missing
                 }
                 mapped_data.append(mapped_row)
             
@@ -686,14 +667,17 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
                     if (row['ProductItemCode'] in unit_operation_val or row['IngredientItemCode'] in unit_operation_val)
                 ]
             
-            return filtered_data, mapped_data
+            # For now, Attribute dropdown is empty, so no filtering based on attribute_val
+            # If attribute_val is used in the future, add similar filtering logic here
+            
+            return filtered_data, mapped_data  # Return filtered data for table, original data for store
         else:
             print("No data returned from database")
-            return [], []
+            return [], []  # Return empty list to keep table hidden if no results
             
     except Exception as e:
         print(f"Error getting lineage data: {e}")
-        return [], []
+        return [], []  # Return empty list on error to keep table hidden
 
 # Clientside callback to update filtered data whenever the filter changes
 clientside_callback(
@@ -702,25 +686,30 @@ clientside_callback(
         console.log('Filter model changed:', filterModel);
         console.log('Row data:', rowData);
 
+        // If rowData is undefined, null, or empty, return no_update
         if (!rowData || rowData.length === 0) {
             console.log('No row data available, skipping filter processing');
             return window.dash_clientside.no_update;
         }
 
+        // If no filters are applied, return all data
         if (!filterModel || Object.keys(filterModel).length === 0) {
             console.log('No filters applied, returning all data');
             return rowData;
         }
 
+        // Apply filters manually in JavaScript
         let filteredData = rowData.filter(row => {
             let passesFilter = true;
 
+            // Loop through each filter in the filterModel
             for (let column in filterModel) {
                 if (!filterModel.hasOwnProperty(column)) continue;
 
                 const filter = filterModel[column];
                 const rowValue = row[column] != null ? row[column].toString() : '';
 
+                // Handle "contains" filter type for text columns
                 if (filter.type === 'contains') {
                     const filterValue = filter.filter != null ? filter.filter.toString().toLowerCase() : '';
                     if (!rowValue.toLowerCase().includes(filterValue)) {
@@ -728,6 +717,7 @@ clientside_callback(
                         break;
                     }
                 }
+                // Handle "equals" filter type for numeric columns
                 else if (filter.type === 'equals') {
                     const rowNum = parseFloat(rowValue);
                     const filterNum = parseFloat(filter.filter);
@@ -761,7 +751,10 @@ clientside_callback(
 def export_all_data(n_clicks, all_data):
     if n_clicks and all_data:
         try:
+            # Convert to DataFrame
             df = pd.DataFrame(all_data)
+            
+            # Return data for download using dict format
             return dict(content=df.to_csv(index=False), filename="genealogy_all_data.csv")
         except Exception as e:
             print(f"Export error: {e}")
@@ -776,13 +769,17 @@ def export_all_data(n_clicks, all_data):
     prevent_initial_call=True
 )
 def export_filtered_data(n_clicks, filtered_data):
-    if not n_clicks:
+    if not n_clicks:  # Only proceed if the button was clicked
         return dash.no_update
 
     if filtered_data is not None and len(filtered_data) > 0:
         try:
+            # Convert to DataFrame
             df = pd.DataFrame(filtered_data)
+            
             print(f"Exporting {len(df)} filtered rows")
+            
+            # Return filtered data for download
             return dict(content=df.to_csv(index=False), filename="genealogy_filtered_data.csv")
         except Exception as e:
             print(f"Filtered export error: {e}")
@@ -805,7 +802,7 @@ def export_filtered_data(n_clicks, filtered_data):
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], [], [], None, None
+        return None, None, [], [], [], None, None  # Reset everything to empty
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 # Clientside callback to download the ECharts tree chart as PNG
@@ -819,22 +816,25 @@ clientside_callback(
 
         console.log('Export visualization button clicked, attempting to download PNG');
 
+        // Get the ECharts component DOM element
         const chartElement = document.getElementById('tree-chart');
         if (!chartElement) {
             console.error('Could not find tree-chart element');
             return window.dash_clientside.no_update;
         }
 
+        // Get the ECharts instance
         const echartsInstance = window.echarts.getInstanceByDom(chartElement);
         if (!echartsInstance) {
             console.error('Could not find ECharts instance for tree-chart');
             return window.dash_clientside.no_update;
         }
 
+        // Generate the PNG data URL
         const dataURL = echartsInstance.getDataURL({
             type: 'png',
-            pixelRatio: 2,
-            backgroundColor: '#fff'
+            pixelRatio: 2,  # Increase resolution for better quality
+            backgroundColor: '#fff'  # White background for the PNG
         });
 
         if (!dataURL) {
@@ -842,9 +842,10 @@ clientside_callback(
             return window.dash_clientside.no_update;
         }
 
+        // Create a temporary link element to trigger the download
         const link = document.createElement('a');
         link.href = dataURL;
-        link.download = 'genealogy_tree.png';
+        link.download = 'genealogy_tree.png';  # File name for the download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -853,7 +854,7 @@ clientside_callback(
         return window.dash_clientside.no_update;
     }
     """,
-    Output('tree-chart', 'id'),
+    Output('tree-chart', 'id'),  # Dummy output to satisfy Dash callback requirement
     [Input('export-visualization-button', 'n_clicks')],
     prevent_initial_call=True
 )
