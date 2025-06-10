@@ -30,7 +30,7 @@ def create_network_graph():
     )
     return fig
 
-# Modified csv_to_hierarchy function to handle root_parentlot as the root and prevent cycles
+# Modified csv_to_hierarchy function to use Level for hierarchy
 def csv_to_hierarchy(csv_data):
     # Dictionary to track nodes with their metadata
     node_info = {}
@@ -40,50 +40,56 @@ def csv_to_hierarchy(csv_data):
 
     # First pass: create all nodes with their metadata
     for _, row in csv_data.iterrows():
-        root = row['root']
-        source = row['source']
-        ingredient = row['ingredient']
+        root = row['root']  # ParentItemCode (root_parentlot)
+        source = row['source']  # ProductItemCode (startnode)
+        ingredient = row['ingredient']  # IngredientItemCode (endnode)
         root_desc = row.get('root desc', '')
         source_desc = row.get('source desc', '')
         ingredient_desc = row.get('ingredient description', '')
-        level = row.get('level', 0)
+        level = row.get('level', -1)  # Use provided Level, default to -1 if missing
 
         # Add root node if it doesn't exist
         if root not in node_info:
             node_info[root] = {
                 "name": root,
                 "description": root_desc,
+                "pn": row.get('ParentPN', ''),  # Store ParentPN
+                "role": "Root",
                 "references": [],
-                "level": 0,  # Root is at level 0
+                "level": level if level != -1 else 0,  # Use data's Level or 0
                 "workforce": 0,
                 "Quantity": 0
             }
 
-        # Add source if it doesn't exist
+        # Add source (ProductPN) if it doesn't exist
         if source not in node_info:
             node_info[source] = {
                 "name": source,
                 "description": source_desc,
+                "pn": row.get('ProductPN', ''),  # Store ProductPN
+                "role": "ProductPN",
                 "references": [],
-                "level": 1,  # Source is at level 1
+                "level": level if level != -1 else 1,  # Use data's Level or 1
                 "workforce": 0,
                 "Quantity": 0
             }
 
-        # Add ingredient if it doesn't exist
+        # Add ingredient (IngredientPN) if it doesn't exist
         if ingredient not in node_info:
             node_info[ingredient] = {
                 "name": ingredient,
                 "description": ingredient_desc,
+                "pn": row.get('IngredientPN', ''),  # Store IngredientPN
+                "role": "IngredientPN",
                 "references": [],
-                "level": level,  # Use the Level from the data
+                "level": level,  # Use provided Level
                 "workforce": 0,
                 "Quantity": 0
             }
 
         # Track relationships: root -> source and source -> ingredient
-        relationships.append((root, source))
-        relationships.append((source, ingredient))
+        relationships.append((root, source, level))
+        relationships.append((source, ingredient, level))
         node_info[source]["references"].append(root)
         node_info[ingredient]["references"].append(source)
 
@@ -95,13 +101,15 @@ def csv_to_hierarchy(csv_data):
         node_info[root_name] = {
             "name": root_name,
             "description": "All Manufacturing Processes",
+            "pn": "",
+            "role": "VirtualRoot",
             "references": [],
-            "level": 0,
+            "level": -1,  # Virtual root above all levels
             "workforce": 0,
             "Quantity": 0
         }
         for root in unique_roots:
-            relationships.append((root_name, root))
+            relationships.append((root_name, root, -1))  # Virtual root at level -1
             node_info[root]["references"].append(root_name)
         root_name = root_name
     else:
@@ -111,6 +119,8 @@ def csv_to_hierarchy(csv_data):
     tree = {
         "name": node_info[root_name]["name"],
         "description": node_info[root_name]["description"],
+        "pn": node_info[root_name]["pn"],
+        "role": node_info[root_name]["role"],
         "children": [],
         "shared": False,
         "id": root_name,
@@ -119,14 +129,14 @@ def csv_to_hierarchy(csv_data):
         "Quantity": node_info[root_name]["Quantity"]
     }
 
-    # Build a map of parent -> children
+    # Build a map of parent -> children, grouped by level
     parent_to_children = {}
-    for parent, child in relationships:
+    for parent, child, level in relationships:
         if parent not in parent_to_children:
             parent_to_children[parent] = []
-        parent_to_children[parent].append(child)
+        parent_to_children[parent].append((child, level))
 
-    # Helper function to recursively build the tree with cycle detection
+    # Helper function to recursively build the tree with cycle detection and level sorting
     def build_tree(node_id, parent_node, visited=None):
         if visited is None:
             visited = set()  # Initialize visited set on first call
@@ -137,10 +147,14 @@ def csv_to_hierarchy(csv_data):
         visited.add(node_id)  # Mark the current node as visited
         
         if node_id in parent_to_children:
-            for child_id in parent_to_children[node_id]:
+            # Sort children by level to ensure level-based hierarchy
+            children = sorted(parent_to_children[node_id], key=lambda x: node_info[x[0]]["level"])
+            for child_id, _ in children:
                 child_node = {
                     "name": node_info[child_id]["name"],
                     "description": node_info[child_id]["description"],
+                    "pn": node_info[child_id]["pn"],
+                    "role": node_info[child_id]["role"],
                     "children": [],
                     "shared": len(node_info[child_id]["references"]) > 1,
                     "id": child_id,
@@ -149,7 +163,7 @@ def csv_to_hierarchy(csv_data):
                     "Quantity": node_info[child_id]["Quantity"]
                 }
                 parent_node["children"].append(child_node)
-                build_tree(child_id, child_node, visited)  # Recursive call with visited set
+                build_tree(child_id, child_node, visited)  # Recursive call
 
     # Start building from the root
     build_tree(root_name, tree)
@@ -287,7 +301,9 @@ defaultColDef = {
     "resizable": True,
     "editable": False,
     "minWidth": 100,
-    "headerStyle": {"backgroundColor": "#2c3e50", "color": "#ffffff", "fontWeight": "600", "fontSize": "13px"}
+    "headerStyle": {"backgroundColor": "#2c3e50", "color": "#ffffff", "font изображения
+
+Weight": "600", "fontSize": "13px"}
 }
 
 # Define the layout
@@ -515,6 +531,9 @@ def update_tree_chart(data):
         'source desc': df['ProductName'],  # ProductName
         'ingredient description': df['IngredientName'],  # IngredientName
         'level': df['Level'],  # Use Level to determine hierarchy depth
+        'ParentPN': df['ParentPN'],  # Add PN columns
+        'ProductPN': df['ProductPN'],
+        'IngredientPN': df['IngredientPN']
     })
 
     # Remove rows with NaN values in root, source, or ingredient to avoid errors
@@ -526,12 +545,32 @@ def update_tree_chart(data):
     # Generate the hierarchical JSON
     tree_data = csv_to_hierarchy(hierarchy_data)
     
+    # Define color mapping for levels
+    level_colors = {
+        -1: '#2c3e50',  # Virtual root (All Processes)
+        0: '#3498db',   # Level 0 (e.g., root_parentlot)
+        1: '#2ecc71',   # Level 1 (e.g., ProductPN)
+        2: '#e67e22',   # Level 2 (e.g., IngredientPN)
+        3: '#e74c3c',   # Level 3
+        4: '#9b59b6',   # Level 4
+        # Add more levels as needed
+    }
+
+    # Function to assign itemStyle based on level
+    def assign_item_style(node):
+        node['itemStyle'] = {'color': level_colors.get(node['level'], '#95a5a6')}  # Default color for undefined levels
+        for child in node.get('children', []):
+            assign_item_style(child)
+
+    # Apply itemStyle to all nodes
+    assign_item_style(tree_data)
+
     # ECharts tree chart configuration
     option = {
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
-            "formatter": "{b}<br/>"
+            "formatter": "{b} (Level {c.level}, {c.role})<br/>{c.description}<br/>PN: {c.pn}"
         },
         "series": [
             {
@@ -546,7 +585,8 @@ def update_tree_chart(data):
                     "position": "left",
                     "verticalAlign": "middle",
                     "align": "right",
-                    "fontSize": 9
+                    "fontSize": 9,
+                    "formatter": "{b} (Level {c.level})"
                 },
                 "leaves": {
                     "label": {
@@ -593,7 +633,7 @@ def update_multi_options(search_value, value):
     [
         Output('data-table', 'rowData'),
         Output('all-data-store', 'data'),
-        Output('data-table', 'filterModel'),  # Added to reset column filters
+        Output('data-table', 'filterModel'),
     ],
     [Input('submit-button', 'n_clicks')],
     [
