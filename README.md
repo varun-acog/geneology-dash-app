@@ -87,3 +87,26 @@ Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemc
 
 Now, in the additional filters sections, we have unit operations. In this unit operations, we are having Product Item Codes as filtering options, but now make it as "Product Item Code-Product Name" and "Ingredient Item Code-Ingredient Name" for both products and ingredients respectively
 
+(This error originated from the built-in JavaScript code that runs Dash apps. Click to see the full stack trace or open your browser's console.)
+TypeError: Cannot read properties of undefined (reading 'apply')
+
+    at _callee2$ (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75380:72)
+
+    at tryCatch (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:1062)
+
+    at Generator.<anonymous> (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:3008)
+
+    at Generator.next (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:1699)
+
+    at asyncGeneratorStep (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75205:70)
+
+    at _next (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:163)
+
+    at http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:299
+
+    at new Promise (<anonymous>)
+
+    at http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:90
+
+    at handleClientside (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75331:28)
+
