@@ -146,10 +146,10 @@ styles = {
         'borderRadius': '8px',
         'boxShadow': '0 2px 4px rgba(0,0,0,0.05)',
         'padding': '20px',
-        'marginBottom': '20px'
+        'marginBottom': '10px'
     },
     'sectionTitle': {
-        'fontSize': '18px',
+        'fontSize': '14px',
         'fontWeight': '600',
         'color': '#2c3e50',
         'marginBottom': '15px',
@@ -212,7 +212,7 @@ styles = {
     },
     'clearButton': {
         'backgroundColor': '#E2EAF4',
-        'color': '#3498db',
+        'color': '#000000',
         'padding': '8px 24px',
         'fontSize': '14px',
         'border': 'none',
@@ -473,7 +473,7 @@ def update_tree_chart(data):
                 "type": "tree",
                 "data": [tree_data],
                 "top": "5%",
-                "left": "7%',
+                "left": "7%",
                 "bottom": "5%",
                 "right": "20%",
                 "symbolSize": 8,
@@ -519,7 +519,7 @@ def update_tree_chart(data):
     Input("item-codes-dropdown", "search_value"),
     State("item-codes-dropdown", "value")
 )
-def update_item_codes(search_value, value):
+def update_item_codes_options(search_value, value):
     if not search_value:
         raise PreventUpdate
     return get_item_codes(search_value)
@@ -528,7 +528,7 @@ def update_item_codes(search_value, value):
 @app.callback(
     [
         Output('data-table', 'rowData'),
-        Output('all-data', 'data'),
+        Output('all-data-store', 'data'),
         Output('data-table', 'filterModel')
     ],
     [Input('submit-button', 'n_clicks')],
@@ -549,7 +549,7 @@ def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, ge
         varTraceTarget = None
         
         if item_codes_val:
-            varTraceFor = "', '".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val))
+            varTraceFor = "', '".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
             varTraceTarget = None
         
         GenOrTrc = gen_trc_val if gen_trc_val else "all"
