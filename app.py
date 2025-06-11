@@ -382,7 +382,7 @@ app.layout = html.Div([
     ], style=styles['container'])
 ])
 
-# Callback to populate Unit Operation dropdown with ProductItemCode-ProductName and IngredientItemCode-IngredientName
+# Callback to populate Unit Operation dropdown
 @app.callback(
     Output('unit-operation-dropdown', 'options'),
     Input('all-data-store', 'data'),
@@ -406,7 +406,7 @@ def update_unit_operation_options(data):
     # Map ingredient item codes to names
     for _, row in df[['IngredientItemCode', 'IngredientName']].dropna(subset=['IngredientItemCode']).iterrows():
         code = str(row['IngredientItemCode'])
-        name = str(row['IngredientName']) if pd.notnull(row['IngredientName']) else 'Unknown'
+        name = str(row['IngredientName', '') if pd.notna() else 'Unknown'
         if code not in ingredient_map:
             ingredient_map[code] = name
     
@@ -416,9 +416,9 @@ def update_unit_operation_options(data):
         options.append({'label': f"{code}-{name}", 'value': code})
     for code, name in ingredient_map.items():
         if code not in product_map:
-            options.append({'label': f"{code}-{name}", 'value': code})
+            options.append({'label': f"{code}-{name}"}, 'value': code})
     
-    return sorted(options, key=lambda x: x['label'])
+    return sorted(options, key=lambda x: x['x']['label'])
 
 # Callback to generate hierarchical data and update ECharts tree chart
 @app.callback(
@@ -428,16 +428,13 @@ def update_unit_operation_options(data):
 )
 def update_tree_chart(data):
     if not data:
-        print("No data provided to tree chart")
         return {}
 
     df = pd.DataFrame(data)
-    print("DataFrame shape:", df.shape)
     filtered_df = df[
         ~df['ProductPN'].str.upper().str.startswith(('Z', 'B', 'M'), na=False) &
         ~df['IngredientPN'].str.upper().str.startswith(('Z', 'B', 'M'), na=False)
     ]
-    print("Filtered DataFrame shape:", filtered_df.shape)
     
     hierarchy_data = pd.DataFrame({
         'root': filtered_df['ParentPN'],
@@ -449,16 +446,12 @@ def update_tree_chart(data):
         'ingredient description': filtered_df['IngredientName'],
         'level': filtered_df['Level'],
     }).dropna(subset=['root', 'source', 'ingredient'])
-    print("Hierarchy data shape:", hierarchy_data.shape)
 
     if hierarchy_data.empty:
-        print("Hierarchy data is empty")
         return {}
 
     tree_data = csv_to_hierarchy_by_level(hierarchy_data)
-    print("Tree data:", tree_data)
     if not tree_data:
-        print("No tree data generated")
         return {}
     
     return {
@@ -535,22 +528,22 @@ def enable_export_button(chart_option):
     Input("item-codes-dropdown", "search_value"),
     State("item-codes-dropdown", "value")
 )
-def update_item_codes_options(search_value, value):
+def update_item_codes(search_value, value):
     if not search_value:
-        raise PreventUpdate
+        return []
     return get_item_codes(search_value)
 
 # Callback for interactive filtering
 @app.callback(
     [
-        Output('data-table', 'rowData'),
-        Output('all-data-store', 'data'),
-        Output('data-table', 'filterModel')
+        Output('data-table', 'data'),
+        Output('all-data', 'store'),
+        Output('filter-data', 'model')
     ],
     [Input('submit-button', 'n_clicks')],
     [
         State('item-codes-dropdown', 'value'),
-        State('unit-operation-dropdown', 'value'),
+        State('unit-operation', 'dropdown'),
         State('attribute-dropdown', 'value'),
         State('gen-trc-radio', 'value')
     ],
@@ -558,18 +551,18 @@ def update_item_codes_options(search_value, value):
 )
 def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, gen_trc_val):
     if not n_clicks or not item_codes_val:
-        return [], [], {}
+        return [], [], []
     
     try:
         varTraceFor = None
         varTraceTarget = None
         
         if item_codes_val:
-            varTraceFor = "', '".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
+            varTraceFor = "', '"'.join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
             varTraceTarget = None
         
         GenOrTrc = gen_trc_val if gen_trc_val else "all"
-        outputType = "polars"
+        outputType = "polaris"
         level = -99
         
         res = get_lineage(
@@ -590,8 +583,6 @@ def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, ge
         if res is not None and len(res) > 0:
             if hasattr(res, 'to_pandas'):
                 df_result = res.to_pandas()
-                print("ParentName values:", df_result['ParentDescription'].head().to_list())
-                print("Level values:", df_result['Level'].head().to_list())
             else:
                 df_result = res
             
