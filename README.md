@@ -87,10 +87,56 @@ Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemc
 
 Now, in the additional filters sections, we have unit operations. In this unit operations, we are having Product Item Codes as filtering options, but now make it as "Product Item Code-Product Name" and "Ingredient Item Code-Ingredient Name" for both products and ingredients respectively
 
-ParentName values: ['ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS']
-Level values: [7, 9, 8, 7, 8]
-DataFrame shape: (2060, 11)
-Filtered DataFrame shape: (83, 11)
-Hierarchy data shape: (83, 8)
+KeyError: 'ProductName'
+
+Traceback (most recent call last)
+File "/bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 3805, in get_loc
+return self._engine.get_loc(casted_key)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
+File "index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
+File "pandas/_libs/hashtable_class_helper.pxi", line 7081, in pandas._libs.hashtable.PyObjectHashTable.get_item
+File "pandas/_libs/hashtable_class_helper.pxi", line 7089, in pandas._libs.hashtable.PyObjectHashTable.get_item
+The above exception was the direct cause of the following exception:
+File "/home/users/pr912591/Lineage/Lineage/app.py", line 409, in update_unit_operation_options
+name = str(row['IngredientName']) if pd.notnull(row['ProductName']) else 'Unknown'
+                                                ^^^^^^^^^^^^^^^^^^
+File "/bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages/pandas/core/series.py", line 1121, in __getitem__
+return self._get_value(key)
+       ^^^^^^^^^^^^^^^^^^^^
+File "/bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages/pandas/core/series.py", line 1237, in _get_value
+loc = self.index.get_loc(label)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 3812, in get_loc
+raise KeyError(key) from err
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'ProductName'
+This is the Copy/Paste friendly version of the traceback.
+
+Traceback (most recent call last):
+  File "/bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 3805, in get_loc
+    return self._engine.get_loc(casted_key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
+  File "index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas/_libs/hashtable_class_helper.pxi", line 7081, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas/_libs/hashtable_class_helper.pxi", line 7089, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'ProductName'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/users/pr912591/Lineage/Lineage/app.py", line 409, in update_unit_operation_options
+    name = str(row['IngredientName']) if pd.notnull(row['ProductName']) else 'Unknown'
+                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages/pandas/core/series.py", line 1121, in __getitem__
+    return self._get_value(key)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages/pandas/core/series.py", line 1237, in _get_value
+    loc = self.index.get_loc(label)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/bmrn/spack-packages/linux-rocky8-skylake_avx512/gcc-11.2.0/miniconda3-22.11.1-p72fec7kgbdrqs2wvagbhvlq3ixkdop7/envs/geneology/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 3812, in get_loc
+    raise KeyError(key) from err
+KeyError: 'ProductName'
 Tree data: {'name': 'P0607B', 'description': 'ASB FBDS NOV ACF MEDIA PROCESS', 'children': [{'name': 'P0606-20131', 'description': 'RHASB:  PHENYL SEPHAROSE HIGH SUB CHROMATOGRAPHY', 'children': [{'name': 'P0603-20103', 'description': 'COLUMN PACKING:  PHENYL SEPHAROSE FF HI-SUB FOR RHASB', 'children': [{'name': 'P0614-20102', 'description': 'RESIN PREPPED PHENYL SEPH RHASB', 'children': [], 'id': 'P0614-20102', 'level': 4, 'type': 'ingredient'}], 'id': 'P0603-20103', 'level': 3, 'type': 'ingredient'}, {'name': 'P0605-20131', 'description': 'RHASB:  COPPER CHELATING SEPHAROSE FF CHROMATOGRAPHY', 'children':
 
