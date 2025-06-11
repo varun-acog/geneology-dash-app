@@ -332,7 +332,7 @@ app.layout = html.Div([
             html.Div([
                 html.H4("Visualization", style=styles['sectionTitle']),
                 html.Div([
-                    html.Button("Export", id="export-visualization-button", style=styles['exportButton'])
+                    html.Button("Export", id="export-visualization-button", style=styles['exportButton'], disabled=True)
                 ], style={'textAlign': 'right', 'marginBottom': '10px'}),
                 dcc.Loading(
                     id="loading-tree-chart",
@@ -428,13 +428,16 @@ def update_unit_operation_options(data):
 )
 def update_tree_chart(data):
     if not data:
+        print("No data provided to tree chart")
         return {}
 
     df = pd.DataFrame(data)
+    print("DataFrame shape:", df.shape)
     filtered_df = df[
         ~df['ProductPN'].str.upper().str.startswith(('Z', 'B', 'M'), na=False) &
         ~df['IngredientPN'].str.upper().str.startswith(('Z', 'B', 'M'), na=False)
     ]
+    print("Filtered DataFrame shape:", filtered_df.shape)
     
     hierarchy_data = pd.DataFrame({
         'root': filtered_df['ParentPN'],
@@ -446,12 +449,16 @@ def update_tree_chart(data):
         'ingredient description': filtered_df['IngredientName'],
         'level': filtered_df['Level'],
     }).dropna(subset=['root', 'source', 'ingredient'])
+    print("Hierarchy data shape:", hierarchy_data.shape)
 
     if hierarchy_data.empty:
+        print("Hierarchy data is empty")
         return {}
 
     tree_data = csv_to_hierarchy_by_level(hierarchy_data)
+    print("Tree data:", tree_data)
     if not tree_data:
+        print("No tree data generated")
         return {}
     
     return {
@@ -512,6 +519,15 @@ def update_tree_chart(data):
             }
         ]
     }
+
+# Callback to enable/disable export visualization button
+@app.callback(
+    Output('export-visualization-button', 'disabled'),
+    Input('tree-chart', 'option'),
+    prevent_initial_call=True
+)
+def enable_export_button(chart_option):
+    return not bool(chart_option)  # Enable button if chart_option is non-empty
 
 # Callback to populate item-codes-dropdown
 @app.callback(
@@ -667,6 +683,69 @@ clientside_callback(
     prevent_initial_call=True
 )
 
+# Clientside callback to download ECharts tree chart as PNG
+clientside_callback(
+    """
+    function(n_clicks) {
+        if (!n_clicks || n_clicks <= 0) {
+            console.log('Export visualization button not clicked, skipping');
+            return window.dash_clientside.no_update;
+        }
+
+        console.log('Export visualization button clicked, attempting to download PNG');
+
+        // Check if ECharts is available
+        if (!window.echarts) {
+            console.error('ECharts library not loaded');
+            return window.dash_clientside.no_update;
+        }
+
+        const chartElement = document.getElementById('tree-chart');
+        if (!chartElement) {
+            console.error('Could not find tree-chart element');
+            return window.dash_clientside.no_update;
+        }
+
+        // Add a small delay to ensure chart is initialized
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const echartsInstance = window.echarts.getInstanceByDom(chartElement);
+                if (!echartsInstance) {
+                    console.error('Could not find ECharts instance for tree-chart');
+                    resolve(window.dash_clientside.no_update);
+                    return;
+                }
+
+                const dataURL = echartsInstance.getDataURL({
+                    type: 'png',
+                    pixelRatio: 2,
+                    backgroundColor: '#fff'
+                });
+
+                if (!dataURL) {
+                    console.error('Failed to generate PNG data URL');
+                    resolve(window.dash_clientside.no_update);
+                    return;
+                }
+
+                const link = document.createElement('a');
+                link.href = dataURL;
+                link.download = 'genealogy_tree.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                console.log('PNG download triggered successfully');
+                resolve(window.dash_clientside.no_update);
+            }, 500); // 500ms delay to ensure chart is ready
+        });
+    }
+    """,
+    Output('tree-chart', 'id'),
+    [Input('export-visualization-button', 'n_clicks')],
+    prevent_initial_call=True
+)
+
 # Server-side callback for Export Genealogy
 @app.callback(
     Output("download-all-data", "data"),
@@ -725,56 +804,6 @@ def clear_filters(n_clicks):
     if n_clicks:
         return None, [], [], [], None, None, None
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
-
-# Clientside callback to download ECharts tree chart as PNG
-clientside_callback(
-    """
-    function(n_clicks) {
-        if (!n_clicks || n_clicks <= 0) {
-            console.log('Export visualization button not clicked, skipping');
-            return window.dash_clientside.no_update;
-        }
-
-        console.log('Export visualization button clicked, attempting to download PNG');
-
-        const chartElement = document.getElementById('tree-chart');
-        if (!chartElement) {
-            console.error('Could not find tree-chart element');
-            return window.dash_clientside.no_update;
-        }
-
-        const echartsInstance = window.echarts.getInstanceByDom(chartElement);
-        if (!echartsInstance) {
-            console.error('Could not find ECharts instance for tree-chart');
-            return window.dash_clientside.no_update;
-        }
-
-        const dataURL = echartsInstance.getDataURL({
-            type: 'png',
-            pixelRatio: 2,
-            backgroundColor: '#fff'
-        });
-
-        if (!dataURL) {
-            console.error('Failed to generate PNG data URL');
-            return window.dash_clientside.no_update;
-        }
-
-        const link = document.createElement('a');
-        link.href = dataURL;
-        link.download = 'genealogy_tree.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        console.log('PNG download triggered successfully');
-        return window.dash_clientside.no_update;
-    }
-    """,
-    Output('tree-chart', 'id'),
-    [Input('export-visualization-button', 'n_clicks')],
-    prevent_initial_call=True
-)
 
 if __name__ == '__main__':
     app.run(debug=True, port=8051)
