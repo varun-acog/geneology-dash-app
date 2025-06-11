@@ -85,34 +85,5 @@ Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemc
 
 9. In the visualization on the tooltip show the Name and Description from the results.
 
-Database result: shape: (2_060, 16)
-┌──────┬────────────────┬───────────────┬──────────────┬───┬─────────────────────────────────┬─────────────────────────────────┬─────────┬───────────┐
-│ type ┆ root_parentlot ┆ root_itemcode ┆ startnode    ┆ … ┆ ProductDescription              ┆ IngredientDescription           ┆ CntRecs ┆ CntRecs_1 │
-│ ---  ┆ ---            ┆ ---           ┆ ---          ┆   ┆ ---                             ┆ ---                             ┆ ---     ┆ ---       │
-│ str  ┆ str            ┆ str           ┆ str          ┆   ┆ str                             ┆ str                             ┆ i64     ┆ i64       │
-╞══════╪════════════════╪═══════════════╪══════════════╪═══╪═════════════════════════════════╪═════════════════════════════════╪═════════╪═══════════╡
-│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ C0624-20114A ┆ … ┆ PRODUCTION OF RHASB IN THE GAL… ┆ TUBING ASSEMBLY 25 FOOT C-FLEX… ┆ 40      ┆ 40        │
-│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ M0612-20250  ┆ … ┆ MEDIA PRODUCTION ACF RHASB      ┆ BAG 1000L AEGIS FILM CUSTOM     ┆ 4       ┆ 4         │
-│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ C0624-20111A ┆ … ┆ PRODUCTION OF RHASB IN THE GAL… ┆ 0.2 M SODIUM CARBONATE, 0.5 N … ┆ 120     ┆ 120       │
-│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ P0601-20101  ┆ … ┆ COLUMN PACKING: BLUE SEPHAROSE… ┆ BFR NACL 0.5M                   ┆ 4       ┆ 4         │
-│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ M0612-20250  ┆ … ┆ MEDIA PRODUCTION ACF RHASB      ┆ FILTER SARTOPORE 2 MAXICAPS 0.… ┆ 4       ┆ 4         │
-│ …    ┆ …              ┆ …             ┆ …            ┆ … ┆ …                               ┆ …                               ┆ …       ┆ …         │
-│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ C0622-20114  ┆ … ┆ RHASB:   BIOREACTOR FOR INOCUL… ┆ TUBING ASSEMBLY CELL RETURN     ┆ 4       ┆ 4         │
-│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ P0606-20131  ┆ … ┆ RHASB:  PHENYL SEPHAROSE HIGH … ┆ EKV 10IN FILTER                 ┆ 4       ┆ 4         │
-│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ P0606-20131  ┆ … ┆ RHASB:  PHENYL SEPHAROSE HIGH … ┆ FILTER ASSEMBLY 5 IN SUPORLIFE… ┆ 4       ┆ 4         │
-│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ C0622-20114  ┆ … ┆ RHASB:   BIOREACTOR FOR INOCUL… ┆ PROBE DO 120MM OPTICAL MTTLR T… ┆ 4       ┆ 4         │
-│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ C0622-20114  ┆ … ┆ RHASB:   BIOREACTOR FOR INOCUL… ┆ TUBING ASSEMBLY Y MANIFOLD 2 M… ┆ 4       ┆ 4         │
-└──────┴────────────────┴───────────────┴──────────────┴───┴─────────────────────────────────┴─────────────────────────────────┴─────────┴───────────┘
-Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemcode', 'endnode', 'ingredient_itemcode', 'Level', 'ParentName', 'ProductName', 'IngredientName', 'ParentDescription', 'ProductDescription', 'IngredientDescription', 'CntRecs', 'CntRecs_1']
-ParentName values: ['ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS']
-Level values: [7, 10, 7, 13, 8]
-Database result: shape: (0, 16)
-┌──────┬────────────────┬───────────────┬───────────┬───┬────────────────────┬───────────────────────┬─────────┬───────────┐
-│ type ┆ root_parentlot ┆ root_itemcode ┆ startnode ┆ … ┆ ProductDescription ┆ IngredientDescription ┆ CntRecs ┆ CntRecs_1 │
-│ ---  ┆ ---            ┆ ---           ┆ ---       ┆   ┆ ---                ┆ ---                   ┆ ---     ┆ ---       │
-│ str  ┆ str            ┆ str           ┆ str       ┆   ┆ str                ┆ str                   ┆ i64     ┆ i64       │
-╞══════╪════════════════╪═══════════════╪═══════════╪═══╪════════════════════╪═══════════════════════╪═════════╪═══════════╡
-└──────┴────────────────┴───────────────┴───────────┴───┴────────────────────┴───────────────────────┴─────────┴───────────┘
-Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemcode', 'endnode', 'ingredient_itemcode', 'Level', 'ParentName', 'ProductName', 'IngredientName', 'ParentDescription', 'ProductDescription', 'IngredientDescription', 'CntRecs', 'CntRecs_1']
-No data returned from database
+Now, in the additional filters sections, we have unit operations. In this unit operations, we are having Product Item Codes as filtering options, but now make it as "Product Item Code-Product Name" and "Ingredient Item Code-Ingredient Name" for both products and ingredients respectively
 
