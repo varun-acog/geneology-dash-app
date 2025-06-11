@@ -406,7 +406,7 @@ def update_unit_operation_options(data):
     # Map ingredient item codes to names
     for _, row in df[['IngredientItemCode', 'IngredientName']].dropna(subset=['IngredientItemCode']).iterrows():
         code = str(row['IngredientItemCode'])
-        name = str(row['IngredientName']) if pd.notnull(row['ProductName']) else 'Unknown'
+        name = str(row['IngredientName']) if pd.notnull(row['IngredientName']) else 'Unknown'
         if code not in ingredient_map:
             ingredient_map[code] = name
     
@@ -428,14 +428,16 @@ def update_unit_operation_options(data):
 )
 def update_tree_chart(data):
     if not data:
+        print("No data provided to tree chart")
         return {}
 
     df = pd.DataFrame(data)
-    print("Columns:", df.columns.tolist())
+    print("DataFrame shape:", df.shape)
     filtered_df = df[
         ~df['ProductPN'].str.upper().str.startswith(('Z', 'B', 'M'), na=False) &
         ~df['IngredientPN'].str.upper().str.startswith(('Z', 'B', 'M'), na=False)
     ]
+    print("Filtered DataFrame shape:", filtered_df.shape)
     
     hierarchy_data = pd.DataFrame({
         'root': filtered_df['ParentPN'],
@@ -447,12 +449,16 @@ def update_tree_chart(data):
         'ingredient description': filtered_df['IngredientName'],
         'level': filtered_df['Level'],
     }).dropna(subset=['root', 'source', 'ingredient'])
+    print("Hierarchy data shape:", hierarchy_data.shape)
 
     if hierarchy_data.empty:
+        print("Hierarchy data is empty")
         return {}
 
     tree_data = csv_to_hierarchy_by_level(hierarchy_data)
+    print("Tree data:", tree_data)
     if not tree_data:
+        print("No tree data generated")
         return {}
     
     return {
@@ -584,7 +590,8 @@ def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, ge
         if res is not None and len(res) > 0:
             if hasattr(res, 'to_pandas'):
                 df_result = res.to_pandas()
-                print("Columns:", df_result.columns.tolist())
+                print("ParentName values:", df_result['ParentDescription'].head().to_list())
+                print("Level values:", df_result['Level'].head().to_list())
             else:
                 df_result = res
             
