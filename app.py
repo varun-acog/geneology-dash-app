@@ -146,10 +146,10 @@ styles = {
         'borderRadius': '8px',
         'boxShadow': '0 2px 4px rgba(0,0,0,0.05)',
         'padding': '20px',
-        'marginBottom': '10px'
+        'marginBottom': '20px'
     },
     'sectionTitle': {
-        'fontSize': '14px',
+        'fontSize': '18px',
         'fontWeight': '600',
         'color': '#2c3e50',
         'marginBottom': '15px',
@@ -160,7 +160,17 @@ styles = {
         'width': '100%',
         'fontSize': '14px',
         'borderRadius': '4px',
-        'marginBottom': '10px'
+        'marginBottom': '10px',
+        'maxHeight': '200px',
+        'overflowY': 'auto',
+        'backgroundColor': '#ffffff',
+        'border': '1px solid #d1d5db'
+    },
+    'dropdownOption': {
+        'padding': '8px',
+        'fontSize': '13px',
+        'whiteSpace': 'normal',
+        'wordBreak': 'break-word'
     },
     'input': {
         'width': '100%',
@@ -212,7 +222,7 @@ styles = {
     },
     'clearButton': {
         'backgroundColor': '#E2EAF4',
-        'color': '#000000',
+        'color': '#3498db',
         'padding': '8px 24px',
         'fontSize': '14px',
         'border': 'none',
@@ -314,7 +324,8 @@ app.layout = html.Div([
                             multi=True,
                             clearable=True,
                             placeholder='Unit Operation',
-                            style=styles['dropdown']
+                            style=styles['dropdown'],
+                            optionHeight=40
                         ),
                         dcc.Dropdown(
                             id='attribute-dropdown',
@@ -327,7 +338,7 @@ app.layout = html.Div([
                     ])
                 ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'})
             ], style={'width': '65%', 'display': 'inline-block', 'verticalAlign': 'top'})
-        ], style=styles['section']),
+        ], style=styles': 'section']),
         html.Div([
             html.Div([
                 html.H4("Visualization", style=styles['sectionTitle']),
@@ -393,30 +404,32 @@ def update_unit_operation_options(data):
         return []
     
     df = pd.DataFrame(data)
-    product_map = {}
-    ingredient_map = {}
+    item_map = {}
     
-    # Map product item codes to names
+    # Helper function to truncate names
+    def truncate_name(name, max_length=30):
+        if pd.notnull(name) and len(str(name)) > max_length:
+            return str(name)[:max_length-3] + '…'
+        return str(name) if pd.notnull(name) else 'Unknown'
+    
+    # Process product item codes and names
     for _, row in df[['ProductItemCode', 'ProductName']].dropna(subset=['ProductItemCode']).iterrows():
-        code = str(row['ProductItemCode'])
-        name = str(row['ProductName']) if pd.notnull(row['ProductName']) else 'Unknown'
-        if code not in product_map:
-            product_map[code] = name
+        code = str(row['ProductItemCode']).upper()
+        name = truncate_name(row['ProductName'])
+        item_map[code] = name
     
-    # Map ingredient item codes to names
+    # Process ingredient item codes and names (only add if not already a product)
     for _, row in df[['IngredientItemCode', 'IngredientName']].dropna(subset=['IngredientItemCode']).iterrows():
-        code = str(row['IngredientItemCode'])
-        name = str(row['IngredientName']) if pd.notnull(row['IngredientName']) else 'Unknown'
-        if code not in ingredient_map:
-            ingredient_map[code] = name
+        code = str(row['IngredientItemCode']).upper()
+        name = truncate_name(row['IngredientName'])
+        if code not in item_map:
+            item_map[code] = name
     
     # Create dropdown options
-    options = []
-    for code, name in product_map.items():
-        options.append({'label': f"{code}-{name}", 'value': code})
-    for code, name in ingredient_map.items():
-        if code not in product_map:
-            options.append({'label': f"{code}-{name}", 'value': code})
+    options = [
+        {'label': f"{code} - {name}", 'value': code}
+        for code, name in item_map.items()
+    ]
     
     return sorted(options, key=lambda x: x['label'])
 
@@ -458,15 +471,13 @@ def update_tree_chart(data):
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
-            "formatter": """
-                function(params) {
-                    var data = params.data;
-                    return data.name + '<br/>' +
-                           'Level: ' + data.level + '<br/>' +
-                           'Type: ' + data.type + '<br/>' +
-                           (data.description ? 'Description: ' + data.description : '');
-                }
-            """
+            "formatter": "function(params) {"
+                         "var data = params.data;"
+                         "return data.name + '<br/>' +"
+                         "'Level: ' + data.level + '<br/>' +"
+                         "'Type: ' + data.type + '<br/>' +"
+                         "(data.description ? 'Description: ' + data.description : '');"
+                         "}"
         },
         "series": [
             {
