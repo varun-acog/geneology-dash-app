@@ -31,129 +31,125 @@ def create_network_graph():
     return fig
 
 # Modified csv_to_hierarchy function to handle root_parentlot as the root and prevent cycles
-def csv_to_hierarchy(csv_data):
-    # Dictionary to track nodes with their metadata
+# Modified csv_to_hierarchy function to handle level-based hierarchy
+# Modified csv_to_hierarchy function to use root_itemcode as the display name for root
+def csv_to_hierarchy_by_level(csv_data):
+    """Create a level-based hierarchy where ProductPN at level N has IngredientPN children,
+    and those IngredientPNs become ProductPNs at level N+1"""
+    
+    # Dictionary to track all unique nodes and their metadata
     node_info = {}
-
-    # Track all relationships
+    
+    # Track relationships by level
     relationships = []
-
-    # First pass: create all nodes with their metadata
+    
+    # First pass: collect all unique nodes and their information
     for _, row in csv_data.iterrows():
-        root = row['root']
-        source = row['source']
-        ingredient = row['ingredient']
+        root_pn = row['root']
+        root_itemcode = row.get('root_itemcode', '')  # Get the root_itemcode
+        product_pn = row['source'] 
+        ingredient_pn = row['ingredient']
+        level = row.get('level', 0)
+        
         root_desc = row.get('root desc', '')
         source_desc = row.get('source desc', '')
         ingredient_desc = row.get('ingredient description', '')
-        level = row.get('level', 0)
-
-        # Add root node if it doesn't exist
-        if root not in node_info:
-            node_info[root] = {
-                "name": root,
+        
+        # Add root node (level 0) - CHANGED: Use root_itemcode as the display name
+        if root_pn not in node_info:
+            node_info[root_pn] = {
+                "name": root_itemcode if root_itemcode else root_pn,  # Use root_itemcode for display
                 "description": root_desc,
-                "references": [],
-                "level": 0,  # Root is at level 0
-                "workforce": 0,
-                "Quantity": 0
+                "level": 0,
+                "type": "root"
             }
-
-        # Add source if it doesn't exist
-        if source not in node_info:
-            node_info[source] = {
-                "name": source,
+        
+        # Add product node
+        if product_pn not in node_info:
+            node_info[product_pn] = {
+                "name": product_pn,
                 "description": source_desc,
-                "references": [],
-                "level": 1,  # Source is at level 1
-                "workforce": 0,
-                "Quantity": 0
+                "level": level,
+                "type": "product"
             }
-
-        # Add ingredient if it doesn't exist
-        if ingredient not in node_info:
-            node_info[ingredient] = {
-                "name": ingredient,
+        else:
+            # Update level if this occurrence has a different level
+            node_info[product_pn]["level"] = min(node_info[product_pn]["level"], level)
+        
+        # Add ingredient node (next level)
+        if ingredient_pn not in node_info:
+            node_info[ingredient_pn] = {
+                "name": ingredient_pn,
                 "description": ingredient_desc,
-                "references": [],
-                "level": level,  # Use the Level from the data
-                "workforce": 0,
-                "Quantity": 0
+                "level": row.get('level', level),
+                "type": "ingredient"
             }
-
-        # Track relationships: root -> source and source -> ingredient
-        relationships.append((root, source))
-        relationships.append((source, ingredient))
-        node_info[source]["references"].append(root)
-        node_info[ingredient]["references"].append(source)
-
-    # Build the tree starting from unique root nodes
-    unique_roots = csv_data['root'].unique()
-    if len(unique_roots) > 1:
-        # Create a virtual root if there are multiple root_parentlot values
-        root_name = "All Processes"
-        node_info[root_name] = {
-            "name": root_name,
-            "description": "All Manufacturing Processes",
-            "references": [],
-            "level": 0,
-            "workforce": 0,
-            "Quantity": 0
-        }
-        for root in unique_roots:
-            relationships.append((root_name, root))
-            node_info[root]["references"].append(root_name)
-        root_name = root_name
+        else:
+            # Update level if needed
+            node_info[ingredient_pn]["level"] = min(node_info[ingredient_pn]["level"], level + 1)
+        
+        # Track the relationship: ProductPN -> IngredientPN at this level
+        relationships.append((product_pn, ingredient_pn, level))
+    
+    # Find the root nodes (nodes that don't appear as children in relationships)
+    all_children = set([child for parent, child, level in relationships])
+    root_candidates = [node for node in node_info.keys() 
+                      if node not in all_children or node_info[node]["type"] == "root"]
+    
+    # If we have a designated root from the data, use it; otherwise create a virtual root
+    if len(root_candidates) == 1:
+        root_node = root_candidates[0]
     else:
-        root_name = unique_roots[0]
-
-    # Build the tree
-    tree = {
-        "name": node_info[root_name]["name"],
-        "description": node_info[root_name]["description"],
-        "children": [],
-        "shared": False,
-        "id": root_name,
-        "level": node_info[root_name]["level"],
-        "workforce": node_info[root_name]["workforce"],
-        "Quantity": node_info[root_name]["Quantity"]
-    }
-
-    # Build a map of parent -> children
+        # Create virtual root if multiple or no clear root
+        root_node = "Manufacturing Process"
+        node_info[root_node] = {
+            "name": root_node,
+            "description": "Manufacturing Process Root",
+            "level": -1,
+            "type": "virtual_root"
+        }
+        # Connect all level 0 nodes to virtual root
+        for node, info in node_info.items():
+            if info["level"] == 0:
+                relationships.append((root_node, node, -1))
+    
+    # Build parent-to-children mapping
     parent_to_children = {}
-    for parent, child in relationships:
+    for parent, child, level in relationships:
         if parent not in parent_to_children:
             parent_to_children[parent] = []
         parent_to_children[parent].append(child)
-
-    # Helper function to recursively build the tree with cycle detection
-    def build_tree(node_id, parent_node, visited=None):
+    
+    # Helper function to build tree recursively
+    def build_tree_node(node_id, visited=None):
         if visited is None:
-            visited = set()  # Initialize visited set on first call
+            visited = set()
         
         if node_id in visited:
-            return  # Skip if node has already been visited (cycle detected)
+            return None  # Prevent cycles
         
-        visited.add(node_id)  # Mark the current node as visited
+        visited.add(node_id)
         
+        node_data = {
+            "name": node_info[node_id]["name"],
+            "description": node_info[node_id]["description"],
+            "children": [],
+            "id": node_id,
+            "level": node_info[node_id]["level"],
+            "type": node_info[node_id]["type"]
+        }
+        
+        # Add children if they exist
         if node_id in parent_to_children:
             for child_id in parent_to_children[node_id]:
-                child_node = {
-                    "name": node_info[child_id]["name"],
-                    "description": node_info[child_id]["description"],
-                    "children": [],
-                    "shared": len(node_info[child_id]["references"]) > 1,
-                    "id": child_id,
-                    "level": node_info[child_id]["level"],
-                    "workforce": node_info[child_id]["workforce"],
-                    "Quantity": node_info[child_id]["Quantity"]
-                }
-                parent_node["children"].append(child_node)
-                build_tree(child_id, child_node, visited)  # Recursive call with visited set
-
-    # Start building from the root
-    build_tree(root_name, tree)
-
+                child_node = build_tree_node(child_id, visited.copy())
+                if child_node:
+                    node_data["children"].append(child_node)
+        
+        return node_data
+    
+    # Build the complete tree
+    tree = build_tree_node(root_node)
     return tree
 
 # Initialize the Dash app
@@ -313,46 +309,19 @@ app.layout = html.Div([
             html.Div([
                 html.H4("Filters", style=styles['sectionTitle']),
                 
-                # FROM and TO inputs without loading states
+                # Single Item Codes dropdown
                 html.Div([
-                    html.Div([
-                        dcc.Dropdown(
-                            id='from-dropdown',
-                            multi=True,
-                            clearable=False,
-                            placeholder='FROM',
-                            style=styles['dropdown']
-                        )
-                    ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%'}),
-                    html.Div([
-                        dcc.Dropdown(
-                            id='to-dropdown',
-                            placeholder='TO',
-                            multi=True,
-                            clearable=False,
-                            style=styles['dropdown']
-                        )
-                    ], style={'width': '48%', 'display': 'inline-block'})
+                    dcc.Dropdown(
+                        id='item-codes-dropdown',
+                        multi=True,
+                        clearable=False,
+                        placeholder='Select Item Codes',
+                        style=styles['dropdown']
+                    )
                 ], style={'marginBottom': '15px'}),
             
-                # Level checkboxes (replacing buttons)
+                # Level checkboxes and buttons
                 html.Div([
-                    dcc.Checklist(
-                        id='lot-level-check',
-                        options=[{'label': 'Lot Level', 'value': 'lot'}],
-                        value=['lot'],  # Set Lot Level as checked by default
-                        style={'display': 'inline-block'},
-                        labelStyle=styles['checkboxLabel'],
-                        inputStyle=styles['checkbox']
-                    ),
-                    dcc.Checklist(
-                        id='bag-level-check',
-                        options=[{'label': 'Bag Level', 'value': 'bag'}],
-                        value=[],
-                        style={'display': 'inline-block'},
-                        labelStyle=styles['checkboxLabel'],
-                        inputStyle=styles['checkbox']
-                    ),
                     html.Div([
                         html.Button("Submit", id="submit-button", style=styles['exportButton']),
                         html.Button("Clear", id="clear-button", style=styles['clearButton'])
@@ -493,7 +462,8 @@ def update_unit_operation_options(data):
     
     return options
 
-# Callback to generate hierarchical data and update the ECharts tree chart
+# Updated callback to generate hierarchical data and update the ECharts tree chart
+# with filtering for nodes starting with Z, B, or M
 @app.callback(
     Output('tree-chart', 'option'),
     Input('all-data-store', 'data'),
@@ -506,53 +476,76 @@ def update_tree_chart(data):
     # Convert the table data to a DataFrame
     df = pd.DataFrame(data)
     
-    # Map columns to match csv_to_hierarchy expectations
+    # Filter out rows where ProductPN or IngredientPN start with 'Z', 'B', or 'M'
+    # This filtering is only for visualization, not for the data table
+    filtered_df = df[
+        ~df['ProductPN'].str.upper().str.startswith(('Z', 'B', 'M'), na=False) &
+        ~df['IngredientPN'].str.upper().str.startswith(('Z', 'B', 'M'), na=False)
+    ]
+    
+    # Map columns for level-based hierarchy using filtered data
     hierarchy_data = pd.DataFrame({
-        'root': df['ParentItemCode'],  # root_itemcode
-        'source': df['ProductItemCode'],  # startnode
-        'ingredient': df['IngredientItemCode'],  # endnode
-        'root desc': df['ParentName'],  # ParentName
-        'source desc': df['ProductName'],  # ProductName
-        'ingredient description': df['IngredientName'],  # IngredientName
-        'level': df['Level'],  # Use Level to determine hierarchy depth
+        'root': filtered_df['ParentPN'],  # Keep the same root structure for relationships
+        'root_itemcode': filtered_df['ParentItemCode'],  # Pass root_itemcode for display
+        'source': filtered_df['ProductPN'],  # Product at current level
+        'ingredient': filtered_df['IngredientPN'],  # Ingredient (child) at current level
+        'root desc': filtered_df['ParentName'],
+        'source desc': filtered_df['ProductName'],
+        'ingredient description': filtered_df['IngredientName'],
+        'level': filtered_df['Level'],  # Critical for level-based hierarchy
     })
 
-    # Remove rows with NaN values in root, source, or ingredient to avoid errors
+    # Remove rows with NaN values
     hierarchy_data = hierarchy_data.dropna(subset=['root', 'source', 'ingredient'])
 
     if hierarchy_data.empty:
         return {}
 
-    # Generate the hierarchical JSON
-    tree_data = csv_to_hierarchy(hierarchy_data)
+    # Generate the level-based hierarchical structure
+    tree_data = csv_to_hierarchy_by_level(hierarchy_data)
     
-    # ECharts tree chart configuration
+    if not tree_data:
+        return {}
+    
+    # ECharts tree chart configuration with enhanced styling for level-based view
     option = {
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
-            "formatter": "{b}<br/>"
+            "formatter": {
+                "function": """
+                    function(params) {
+                        var data = params.data;
+                        return data.name + '<br/>' + 
+                               'Level: ' + data.level + '<br/>' +
+                               'Type: ' + data.type + '<br/>' +
+                               (data.description ? 'Description: ' + data.description : '');
+                    }
+                """
+            }
         },
         "series": [
             {
                 "type": "tree",
                 "data": [tree_data],
-                "top": "1%",
+                "top": "5%",
                 "left": "7%",
-                "bottom": "1%",
+                "bottom": "5%",
                 "right": "20%",
-                "symbolSize": 7,
+                "symbolSize": 8,
                 "label": {
                     "position": "left",
                     "verticalAlign": "middle",
                     "align": "right",
-                    "fontSize": 9
+                    "fontSize": 10,
+                    "formatter": "{b}"
                 },
                 "leaves": {
                     "label": {
                         "position": "right",
                         "verticalAlign": "middle",
-                        "align": "left"
+                        "align": "left",
+                        "fontSize": 10
                     }
                 },
                 "emphasis": {
@@ -561,29 +554,31 @@ def update_tree_chart(data):
                 "expandAndCollapse": True,
                 "animationDuration": 550,
                 "animationDurationUpdate": 750,
-                "initialTreeDepth": 2  # Limit initial depth for better visibility
+                "initialTreeDepth": 3,  # Show more levels initially
+                "layout": "orthogonal",  # Better for level-based hierarchies
+                "orient": "LR",  # Left to Right orientation
+                "lineStyle": {
+                    "curveness": 0.5,
+                    "width": 2
+                },
+                "itemStyle": {
+                    "color": "#3498db",
+                    "borderColor": "#2c3e50",
+                    "borderWidth": 1
+                }
             }
         ]
     }
 
     return option
 
+# Callback to populate item-codes-dropdown
 @callback(
-    Output("from-dropdown", "options"),
-    Input("from-dropdown", "search_value"),
-    State("from-dropdown", "value")
+    Output("item-codes-dropdown", "options"),
+    Input("item-codes-dropdown", "search_value"),
+    State("item-codes-dropdown", "value")
 )
-def update_multi_options(search_value, value):
-    if not search_value:
-        raise PreventUpdate
-    return get_item_codes(search_value)
-
-@callback(
-    Output("to-dropdown", "options"),
-    Input("to-dropdown", "search_value"),
-    State("to-dropdown", "value")
-)
-def update_multi_options(search_value, value):
+def update_item_codes_options(search_value, value):
     if not search_value:
         raise PreventUpdate
     return get_item_codes(search_value)
@@ -593,20 +588,19 @@ def update_multi_options(search_value, value):
     [
         Output('data-table', 'rowData'),
         Output('all-data-store', 'data'),
-        Output('data-table', 'filterModel'),  # Added to reset column filters
+        Output('data-table', 'filterModel'),
     ],
     [Input('submit-button', 'n_clicks')],
     [
-        State('from-dropdown', 'value'),
-        State('to-dropdown', 'value'),
+        State('item-codes-dropdown', 'value'),
         State('unit-operation-dropdown', 'value'),
         State('attribute-dropdown', 'value')
     ],
     prevent_initial_call=True
 )
-def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
-    # Only process if Submit button was clicked and at least one value is provided
-    if not n_clicks or (not from_val and not to_val):
+def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val):
+    # Only process if Submit button was clicked and at least one item code is provided
+    if not n_clicks or not item_codes_val:
         return [], [], {}  # Return empty list for rowData, all-data-store, and clear filterModel
     
     try:
@@ -614,18 +608,16 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
         varTraceFor = None
         varTraceTarget = None
         
-        if from_val:
-            varTraceFor = "', '".join(from_val) if isinstance(from_val, list) else str(from_val)
-        
-        if to_val:
-            varTraceTarget = "', '".join(to_val) if isinstance(to_val, list) else str(to_val)
+        if item_codes_val:
+            # Treat all selected item codes as either TraceFor or TraceTarget
+            varTraceFor = "', '".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
+            varTraceTarget = varTraceFor  # Use same values for both to mimic combined FROM/TO behavior
             
         # Get lineage data from database
-        outputType = "polars"  # "polars" or "duckdb"
-        GenOrTrc = "gen"  # "trc", "gen", or "all"
-        level = -99  # -99 for all levels, 1 for first level, etc.
+        outputType = "polars"
+        GenOrTrc = "gen"
+        level = -99
         
-        # Fetch data with the specified output columns, including COUNT(*) as CntRecs
         res = get_lineage(
             varTraceFor,
             varTraceTarget,
@@ -643,7 +635,6 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
         
         # Convert polars DataFrame to list of dictionaries and map columns
         if res is not None and len(res) > 0:
-            # Convert to pandas if it's a polars DataFrame
             if hasattr(res, 'to_pandas'):
                 df_result = res.to_pandas()
                 print("ParentName values:", df_result['ParentDescription'].head().to_list())
@@ -651,7 +642,6 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
             else:
                 df_result = res
             
-            # Map database columns to display columns as specified
             mapped_data = []
             for _, row in df_result.iterrows():
                 mapped_row = {
@@ -669,23 +659,21 @@ def update_table(n_clicks, from_val, to_val, unit_operation_val, attribute_val):
                 }
                 mapped_data.append(mapped_row)
             
-            # Apply additional filtering based on Unit Operation
             filtered_data = mapped_data
-            if unit_operation_val:  # If Unit Operation values are selected
+            if unit_operation_val:
                 filtered_data = [
                     row for row in mapped_data
                     if (row['ProductItemCode'] in unit_operation_val or row['IngredientItemCode'] in unit_operation_val)
                 ]
             
-            # Reset the filterModel to clear all column filters
-            return filtered_data, mapped_data, {}  # Return filtered data, original data, and empty filterModel
+            return filtered_data, mapped_data, {}
         else:
             print("No data returned from database")
-            return [], [], {}  # Return empty lists and clear filterModel if no results
+            return [], [], {}
             
     except Exception as e:
         print(f"Error getting lineage data: {e}")
-        return [], [], {}  # Return empty lists and clear filterModel on error
+        return [], [], {}
 
 # Clientside callback to update filtered data whenever the filter changes
 clientside_callback(
@@ -798,20 +786,21 @@ def export_filtered_data(n_clicks, filtered_data):
 
 # Callback for Clear button
 @app.callback(
-    [Output('from-dropdown', 'value'),
-     Output('to-dropdown', 'value'),
-     Output('data-table', 'rowData', allow_duplicate=True),
-     Output('all-data-store', 'data', allow_duplicate=True),
-     Output('filtered-data-store', 'data', allow_duplicate=True),
-     Output('unit-operation-dropdown', 'value'),
-     Output('attribute-dropdown', 'value')],
+    [
+        Output('item-codes-dropdown', 'value'),
+        Output('data-table', 'rowData', allow_duplicate=True),
+        Output('all-data-store', 'data', allow_duplicate=True),
+        Output('filtered-data-store', 'data', allow_duplicate=True),
+        Output('unit-operation-dropdown', 'value'),
+        Output('attribute-dropdown', 'value')
+    ],
     [Input('clear-button', 'n_clicks')],
     prevent_initial_call=True
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], [], [], None, None  # Reset everything to empty
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, [], [], [], None, None  # Reset everything to empty
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 # Clientside callback to download the ECharts tree chart as PNG
 clientside_callback(
