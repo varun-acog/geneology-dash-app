@@ -5,7 +5,7 @@ DATABASE_URL = r"data/lineage.db"
 
 engine = duckdb.connect(DATABASE_URL, read_only=True)
 
-__all__ = ["get_lineage", "get_item_codes", "get_product_codes"]
+__all__ = ["get_lineage", "get_item_codes", "get_product_codes", "get_item_to_product_mapping"]
 
 def get_product_codes(search_value=None) -> list[dict]:
     """
@@ -66,6 +66,27 @@ def get_item_codes(search_value) -> list[dict]:
     )
     
     return result_list
+
+def get_item_to_product_mapping(item_codes: set) -> dict:
+    """
+    Fetch Product Codes for a set of Item Codes from ItemMaster.
+    
+    Args:
+        item_codes (set): Set of Item Codes to map to Product Codes.
+    
+    Returns:
+        dict: Dictionary mapping Item Codes to Product Codes.
+    """
+    if not item_codes:
+        return {}
+    
+    query = f"""
+        SELECT ItemCode, ProductCode
+        FROM ItemMaster
+        WHERE ItemCode IN ({','.join([f"'{code}'" for code in item_codes])})
+    """
+    result = engine.execute(query).pl().to_pandas()
+    return dict(zip(result['ItemCode'], result['ProductCode']))
 
 def get_lineage(
     startNodes,
@@ -173,9 +194,11 @@ def get_lineage(
         group by all
         """
     else:
+        # Remove duplicate CntRecs to avoid CntRecs_1
         qrystr = f"""
-        select {outputcols}, count(*) as CntRecs from ({qrystr}) as t
+        select {outputcols} from ({qrystr}) as t
         group by all
+        having count(*) > 0
         """
     
     if outputtype == "polars":
@@ -264,7 +287,7 @@ def func_trc_PrBID(level):
                     ParentLotLabel
                 from vw_MatTxnsWithItemCodes
                 GROUP BY ALL
-        ) ,
+        )ទ
             bid
             as
             (
@@ -415,7 +438,7 @@ def func_gen_PrBID(level):
                     i.LotLabel Ingredient_LotLabel,
                     i.ParentLotLabel Ingredient_ParentLotLabel
             FROM bid
-                    JOIN d p on bid.ProductBatchID = p.BATCH_ID 
+                    JOIN d p on bid.ProductBatchID = p.BATCH_ID
                         AND p.TYPE = 'Product'
                     JOIN d i on bid.ProductBatchID = i.BATCH_ID 
                         and i.TYPE = 'Ingredient'
