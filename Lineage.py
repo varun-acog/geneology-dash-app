@@ -1,50 +1,71 @@
 import duckdb
 import polars as pl
 
-# import json
-
-# Author: Satish Vammi
-# Description: This script is used to create a traceability and genealogy system using DuckDB.
-# Function accepts Item codes, Lot Numbers, Parent Lot or Supplier Lot Numbers as source and target.
-# It creates temporary tables to store the results of the traceability and genealogy queries in-memory so the output is session scoped
-# To-do: Add more comments and docstrings to the code. Add more test cases to the test function.
-# To-do: Add function to output visualization of the data
-
-DATABASE_URL =  r"data/lineage.db"
+DATABASE_URL = r"data/lineage.db"
 
 engine = duckdb.connect(DATABASE_URL, read_only=True)
 
-__all__ = ["get_lineage"]
+__all__ = ["get_lineage", "get_item_codes", "get_product_codes"]
 
-
-
-
-def get_item_codes(search_value) -> list[str]:
-    pr_in = engine.execute("""select types.ITEMCODE as "ItemCode", im.Category, im.ProductCode, im.Description, im.UnitOpName, im.tag
-                    FROM 
-                    vw_ListOfTypes types
-                    LEFT JOIN ItemMaster im ON im.ItemCode = split_part(types.ITEMCODE, '-', 1)
-                    where types.ITEMCODE IS NOT NULL
-                    AND types.ITEMCODE ilike '%{}%'
-                   """.format(search_value)).pl()
+def get_product_codes(search_value=None) -> list[dict]:
+    """
+    Fetch distinct Product Codes from ItemMaster, optionally filtered by search value.
     
+    Args:
+        search_value (str, optional): Search term to filter Product Codes.
+    
+    Returns:
+        list[dict]: List of dictionaries with 'label' and 'value' for dropdown options.
+    """
+    query = """
+        SELECT DISTINCT ProductCode as product_code
+        FROM ItemMaster
+        WHERE ProductCode IS NOT NULL
+    """
+    if search_value:
+        query += f" AND ProductCode ILIKE '%{search_value}%'"
+    
+    result = engine.execute(query).pl()
     
     result_list = (
-            
-pr_in.with_columns([
-    pl.struct([
-     pl.when(pl.col("ProductCode").is_not_null())
-.then(pl.col("ProductCode") + " - " + pl.col("ItemCode"))
-.otherwise(pl.col("ItemCode"))
-.alias("label"),
-pl.col("ItemCode").alias("value")
-]).alias("item_dict")
-])
-.select("item_dict").to_series().to_list()
+        result.select([
+            pl.struct([
+                pl.col("product_code").alias("label"),
+                pl.col("product_code").alias("value")
+            ]).alias("product_dict")
+        ])
+        .select("product_dict")
+        .to_series()
+        .to_list()
+    )
+    
+    return sorted(result_list, key=lambda x: x['label'])
+
+def get_item_codes(search_value) -> list[dict]:
+    pr_in = engine.execute("""
+        SELECT types.ITEMCODE as "ItemCode", im.Category, im.ProductCode, im.Description, im.UnitOpName, im.tag
+        FROM vw_ListOfTypes types
+        LEFT JOIN ItemMaster im ON im.ItemCode = split_part(types.ITEMCODE, '-', 1)
+        WHERE types.ITEMCODE IS NOT NULL
+        AND types.ITEMCODE ILIKE '%{}%'
+    """.format(search_value)).pl()
+    
+    result_list = (
+        pr_in.with_columns([
+            pl.struct([
+                pl.when(pl.col("ProductCode").is_not_null())
+                .then(pl.col("ProductCode") + " - " + pl.col("ItemCode"))
+                .otherwise(pl.col("ItemCode"))
+                .alias("label"),
+                pl.col("ItemCode").alias("value")
+            ]).alias("item_dict")
+        ])
+        .select("item_dict")
+        .to_series()
+        .to_list()
     )
     
     return result_list
-
 
 def get_lineage(
     startNodes,
@@ -69,7 +90,6 @@ def get_lineage(
         qrylevel = level
 
     func_Source(startNodes, GenOrTrc, qrylevel)  # refresh trace temp tables
-    
 
     if endNodes is not None:
         func_Target(endNodes)  # refresh target temp tables
@@ -158,20 +178,12 @@ def get_lineage(
         group by all
         """
     
-
     if outputtype == "polars":
         return engine.execute(qrystr).pl()
-    elif (
-        outputtype == "duckdb"
-    ):  # this is returning a tuple, not exactly a duckdb dataframe
-        # return engine.sql(qrystr).execute()
+    elif outputtype == "duckdb":
         return engine.execute(qrystr).fetchall()
-    # elif outputtype == "csv":
     else:
         raise ValueError("Invalid output type. Use 'polars' or 'duckdb'.")
-
-    # engine.close()
-
 
 def func_trc_PrBID(level):
     engine.execute(
@@ -183,20 +195,9 @@ def func_trc_PrBID(level):
             JOIN vw_trc_PIBID mt on p.ItemCode = mt.ItemCode
         WHERE 1=1 AND mt.Type='Ingredient' 
         AND p.lot_number = mt.LOT_NUMBER 
-        --AND P.NodeType <> 'ParentLot' 		
         group by ProductBatchID, p.Lot_Number, p.ItemCode, mt.slnadj, mt.pln
         """
     )
-
-    #     union all
-
-    # select
-    #     PRODUCTBATCHID, p.Lot_Number, p.ItemCode, mt.SLNADJ, mt.PLN
-    # from tmp_TraceForLots p
-    #     JOIN vw_trc_PIBID mt on p.ItemCode = mt.ItemCode
-    # WHERE 1=1 AND mt.Type='Ingredient'
-    # AND p.lot_number = mt.PLN AND P.NodeType = 'ParentLot'
-    # group by ProductBatchID, p.Lot_Number, p.ItemCode, mt.SLNADJ, mt.PLN
 
     engine.execute(
         f"""
@@ -215,22 +216,14 @@ def func_trc_PrBID(level):
         null as IngredientBatchID,
         CAST('NANCHOR' as nvarchar(50)) AS ItemCode, 
         CAST('NANCHOR' as nvarchar(50)) AS Lot_Number, 
-        --ingredient batchid not required for traceability
-        --IngredientBatchID, 
-        --pbid.ItemCode,
-        --pbid.LOT_NUMBER,
         1 as Level, 
         C.Lot_Number as Parent,
         C.itemcode as ParentItemCode,
-        --C.PROJECTID, 
-        --C.RecID, 
         C.SLNADJ, 
         C.PLN ParentPLN
         from vw_Trc_PrBID C
         GROUP BY C.ProductBatchID, C.LOT_NUMBER, C.ItemCode, 
-        --C.Projectid, C.RecID, 
-        C.SLNADJ, C.PLN				
-
+        C.SLNADJ, C.PLN
 
         union all 
 
@@ -242,14 +235,11 @@ def func_trc_PrBID(level):
         r.Level + 1,
         r.Parent,
         r.ParentItemCode,
-        --R.PROJECTID, 
-        --R.RecID,
         R.SLNADJ,
         R.ParentPLN
         from r, pbid d 
         where 
         r.ProductBatchID = d.IngredientBatchID 
-        --to prevent from failing as the max recursion is 100
         AND r.level< {level}
         )
         select * from r
@@ -263,18 +253,11 @@ def func_trc_PrBID(level):
             d
             AS
             (
-                --TODO Get Item Master and Lot Number
-                --Avoid Transaction Table 
                 select 
                     PLN, 
                     BATCH_ID, 
-                    --SUM(QUANTITY) TotalQty, 
                     TYPE, 
                     ItemCode, 
-                    --TRANSACTION_UOM,
-                    --MIN(TRANSACTION_DATE) MINTXNDATE,
-                    --MAX(TRANSACTION_DATE) MAXTXNDATE, COUNT(*) CNT,
-                    --ProductCode,
                     LOT_NUMBER,
                     SLNADJ as SupplierLot,
                     LotLabel,
@@ -292,8 +275,8 @@ def func_trc_PrBID(level):
                     ParentItemCode AS Root_ItemCode, 
                     Parent as Root_Lot,
                     'L' as Mode,
-        		    ParentPLN as Root_ParentLot, 
-        		    SLNADJ as Root_SupplierLot
+                    ParentPLN as Root_ParentLot, 
+                    SLNADJ as Root_SupplierLot
                 FROM tmp_Trc_Results_bid l
                 WHERE 1=1 
                 GROUP BY ALL
@@ -327,25 +310,11 @@ def func_trc_PrBID(level):
         GROUP BY ALL
         )
         select *
-        -- ParentItemCode, 
-        -- ParentLot, 
-        -- ParentPLN,
-        -- ParentSuppLN,
-        -- Level, 
-        -- ProductBatchID, 
-        -- ProductItemCode, 
-        -- ProductLot,
-        -- ProductLotPLN,
-        -- IngBatchID,
-        -- CASE WHEN IngredientItemCode IS NULL THEN ParentItemCode ELSE IngredientItemCode END AS IngredientItemCode,
-        -- case when IngredientLot is null then ParentLot else IngredientLot end as IngredientLot
         from r
         """
     )
 
-
 def func_gen_PrBID(level):
-    # This is where the recursion happens to link the child nodes to root node
     engine.execute(
         f"""
         CREATE OR REPLACE TEMP TABLE tmp_Gen_Results_bid AS
@@ -365,9 +334,9 @@ def func_gen_PrBID(level):
                     IngredientBatchID,
                     1 as Level,
                     PBID.ProductBatchID as Parent,
-    				C.NodeType
+                    C.NodeType
                 from pbid
-    				JOIN tmp_GenForLots C ON PBID.ProductBatchID = C.BATCH_ID
+                    JOIN tmp_GenForLots C ON PBID.ProductBatchID = C.BATCH_ID
                 where 1=1
 
             union all
@@ -377,12 +346,11 @@ def func_gen_PrBID(level):
                     d.IngredientBatchID,
                     r.Level + 1,
                     r.Parent,
-       				R.NodeType
+                    R.NodeType
                 from r, pbid d
                 where 
-    		--use below for finding ancestors i.e., top (final goods) to bottom
-    		r.IngredientBatchID = d.ProductBatchID
-    		AND r.level< {level}
+                    r.IngredientBatchID = d.ProductBatchID
+                    AND r.level< {level}
             )
         select productbatchid, ingredientbatchid, level, parent, NodeType
         from r
@@ -390,7 +358,7 @@ def func_gen_PrBID(level):
     """
     )
 
-    engine.query(
+    engine.execute(
         """
         CREATE OR REPLACE TEMP VIEW vw_Gen_Results AS 
         with
@@ -400,16 +368,10 @@ def func_gen_PrBID(level):
             select 
                 PLN, 
                 BATCH_ID, 
-                --SUM(QUANTITY) TotalQty, 
                 TYPE, 
                 ItemCode, 
-                --TRANSACTION_UOM,
-                --MIN(TRANSACTION_DATE) MINTXNDATE,
-                --MAX(TRANSACTION_DATE) MAXTXNDATE, COUNT(*) CNT,
-                --ProductCode,
-                --ItemType, 
                 LOT_NUMBER,
-        		SLNADJ as SupplierLot,
+                SLNADJ as SupplierLot,
                 LotLabel,
                 ParentLotLabel
             from vw_MatTxnsWithItemCodes
@@ -424,8 +386,7 @@ def func_gen_PrBID(level):
                     d.ItemCode ParentItemCode, 
                     d.PLN ParentLot ,
                     d.lot_number,
-                    --d.ProductCode ParentProductCode,
-        			l.Parent ParentBatchID
+                    l.Parent ParentBatchID
                 FROM tmp_Gen_Results_bid l
                     JOIN d on l.Parent = d.BATCH_ID and d.type = 'Product'
                 WHERE 1=1
@@ -436,49 +397,38 @@ def func_gen_PrBID(level):
             as
             (
             SELECT
-        		    --bid.ParentBatchID,
-                    --bid.ParentProductCode Root_ProductCode,
                     bid.ParentItemCode Root_ItemCode, 
                     bid.ParentLot Root_ParentLot, 
                     bid.lot_number Root_Lot,
                     bid.Level,
-                    --i.itemtype,
                     p.BATCH_ID Product_BatchID,
                     p.ItemCode Product_ItemCode,
                     p.PLN Product_PLN,
                     i.ItemCode Ingredient_ItemCode,
-                    --i.PLN IngredientLot,
                     p.LOT_NUMBER Product_Lot,
                     p.LotLabel Product_LotLabel,
                     p.ParentLotLabel Product_ParentLotLabel,
                     i.BATCH_ID Ingredient_BatchID,
-
                     i.LOT_NUMBER Ingredient_Lot,
-
-        			i.SupplierLot,
+                    i.SupplierLot,
                     i.PLN Ingredient_PLN,
                     i.LotLabel Ingredient_LotLabel,
                     i.ParentLotLabel Ingredient_ParentLotLabel
-
             FROM bid
                     JOIN d p on bid.ProductBatchID = p.BATCH_ID 
                         AND p.TYPE = 'Product'
                     JOIN d i on bid.ProductBatchID = i.BATCH_ID 
                         and i.TYPE = 'Ingredient'
-
             WHERE 
                 (bid.level>1)
                 OR (bid.level = 1 AND bid.lot_number = p.LOT_NUMBER)
             )
         select *
         from r
-    """
+        """
     )
 
-
 def func_Source(input, GenOrTrc, level):
-    # This function converts Item Code, Lot Number, Parent Lot and Supplier Lot into Batch ID's for Gen and Lots for Trace.
-    # Creates temporary tables based on the input Item codes, Lot Numbers, Parent Lot or Supplier Lot Numbers.
     varTraceFor = input
 
     if GenOrTrc == "trc" or GenOrTrc == "all":
@@ -553,14 +503,10 @@ def func_Source(input, GenOrTrc, level):
                     group by all
                     )
             """
-        # print(strGenFor)
         engine.execute(strGenFor)
         func_gen_PrBID(level)  # refresh gen temp tables
 
-
 def func_Target(input):
-    # This function converts Item Code, Lot Number, Parent Lot and Supplier Lot into Batch ID's for Gen and Lots for Trace.
-    # Creates temporary tables based on the input Item codes, Lot Numbers, Parent Lot or Supplier Lot Numbers.
     varTraceTarget = input
 
     strTraceTarget = f"""CREATE OR REPLACE TEMP TABLE tmp_TraceTarget AS (
@@ -601,5 +547,4 @@ def func_Target(input):
             AND mt.SUPPLIER_LOT_NUMBER in ('{varTraceTarget}')
         group by mt.ItemCode, mt.Lot_Number)
         """
-    # print(str)
     engine.execute(strTraceTarget)
