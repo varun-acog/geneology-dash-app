@@ -609,9 +609,9 @@ def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val):
         varTraceTarget = None
         
         if item_codes_val:
-            # Treat all selected item codes as either TraceFor or TraceTarget
+            # Pass item_codes_val only to varTraceFor
             varTraceFor = "', '".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
-            varTraceTarget = varTraceFor  # Use same values for both to mimic combined FROM/TO behavior
+            varTraceTarget = None  # Set to None to mimic single input behavior
             
         # Get lineage data from database
         outputType = "polars"
