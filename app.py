@@ -226,7 +226,7 @@ styles = {
         'border': 'none',
         'borderRadius': '4px',
         'cursor': 'pointer',
-        'transition': 'left 0.5s ease-out',
+        'transition': 'background-color 0.2s',
         'width': '100%'
     },
     'checkboxLabel': {
@@ -257,7 +257,7 @@ styles = {
         'border': 'none',
         'borderRadius': '0px',
         'cursor': 'pointer',
-        'transition': 'background-color 0 Demo Mode'
+        'transition': 'background-color 0.2s'
     }
 }
 
@@ -268,12 +268,12 @@ columnDefs = [
     {"field": "ParentPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "Level", "filter": "agNumberColumnFilter", "filterParams": {"filterOptions": ["equals"], "suppressAndOrCondition": True}},
     {"field": "ProductItemCode", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
-    {"field": "ProductName", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
-    {"field": "ProductPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
-    {"field": "IngredientItemCode", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
-    {"field": "IngredientName", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
-    {"field": "IngredientPN", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
-    {"field": "CntRecs", "filter": "agNumberColumnFilter", "filterParams": {"filterOptions": ["equals"], "suppressAndOrCondition": True}}
+    {"field": "ProductName", "filter": "agTextColumnFilter", "filterParams": "filterOptions": {}},
+    {"field": "ProductPN", "filter": "parent"},
+    {"field": "IngredientItemCode"},
+    {"field": "name": "Ingredient"},
+    {"field": "IngredientPN"},
+    {"field": "CntRecs"}
 ]
 
 # AG Grid default column properties
@@ -283,11 +283,11 @@ defaultColDef = {
     "resizable": True,
     "editable": False,
     "minWidth": 100,
-    "headerStyle": {"backgroundColor": "#2c3e50", "color": "#ffffff", "fontWeight": "600", "fontSize": "13px"}
+    "headerStyle": {"backgroundColor": "#2c3e50", "color": "#ffffff", "fontWeight": "600", "fontSize": "14px"}
 }
 
 # Define the layout
-app.layout = html.Div([
+app = dash.Dash([
     # Download components for file exports
     dcc.Download(id="download-all-data"),
     dcc.Download(id="download-filtered-data"),
@@ -300,11 +300,12 @@ app.layout = html.Div([
     html.Div([
         # Header
         html.Div([
-            html.H1("Genealogy App", style=styles['headerText'])
-        ], style=styles['header']),
+            html.H1("Genealogy App", style="styles['headerText']")),
+        ], style=styles['header'])),
         
         # Filters and controls section
         html.Div([
+            # Filters section (Left side controls)
             # Left side controls (Filters)
             html.Div([
                 html.H4("Filters", style=styles['sectionTitle']),
@@ -449,7 +450,7 @@ app.layout = html.Div([
     ], style=styles['container'])
 ])
 
-# Callback to populate Unit Operation dropdown with unique ProductItemCode and IngredientItemCode values
+# Callback to populate Unit Operation dropdown with ProductItemCode-ProductName and IngredientItemCode-IngredientName
 @app.callback(
     Output('unit-operation-dropdown', 'options'),
     Input('all-data-store', 'data'),
@@ -462,15 +463,44 @@ def update_unit_operation_options(data):
     # Convert the list of dictionaries to a DataFrame
     df = pd.DataFrame(data)
     
-    # Extract unique values from ProductItemCode and IngredientItemCode
-    product_item_codes = df['ProductItemCode'].dropna().unique()
-    ingredient_item_codes = df['IngredientItemCode'].dropna().unique()
+    # Create dictionaries to map item codes to their names (use first non-null name)
+    product_map = {}
+    ingredient_map = {}
     
-    # Combine and get unique values
-    all_item_codes = set(product_item_codes).union(set(ingredient_item_codes))
+    # Process product item codes and names
+    for _, row in df[['ProductItemCode', 'ProductName']].dropna(subset=['ProductItemCode']).iterrows():
+        code = str(row['ProductItemCode'])
+        name = str(row['ProductName']) if pd.notnull(row['ProductName']) else 'Unknown'
+        if code not in product_map:
+            product_map[code] = name
     
-    # Convert to dropdown options format
-    options = [{'label': str(code), 'value': str(code)} for code in sorted(all_item_codes)]
+    # Process ingredient item codes and names
+    for _, row in df[['IngredientItemCode', 'IngredientName']].dropna(subset=['IngredientItemCode']).iterrows():
+        code = str(row['IngredientItemCode'])
+        name = str(row['IngredientName']) if pd.notnull(row['IngredientName']) else 'Unknown'
+        if code not in ingredient_map:
+            ingredient_map[code] = name
+    
+    # Create dropdown options
+    options = []
+    
+    # Add product options
+    for code, name in product_map.items():
+        options.append({
+            'label': f"{code}-{name}",
+            'value': code
+        })
+    
+    # Add ingredient options
+    for code, name in ingredient_map.items():
+        if code not in product_map:  # Avoid duplicates if code appears in both
+            options.append({
+                'label': f"{code}-{name}",
+                'value': code
+            })
+    
+    # Sort options by label for better usability
+    options = sorted(options, key=lambda x: x['label'])
     
     return options
 
