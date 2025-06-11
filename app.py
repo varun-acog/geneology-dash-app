@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html, Input, Output, callback, State, clientside_callback
+from dash import dcc, html, Input, Output, State, callback, clientside_callback
 from dash_echarts import DashECharts
 import dash_ag_grid as dag
 import pandas as pd
@@ -222,7 +222,7 @@ styles = {
     },
     'clearButton': {
         'backgroundColor': '#E2EAF4',
-        'color': '#3498db',
+        'color': '#000000',
         'padding': '8px 24px',
         'fontSize': '14px',
         'border': 'none',
@@ -338,7 +338,7 @@ app.layout = html.Div([
                     ])
                 ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'})
             ], style={'width': '65%', 'display': 'inline-block', 'verticalAlign': 'top'})
-        ], style=styles': 'section']),
+        ], style=styles['section']),
         html.Div([
             html.Div([
                 html.H4("Visualization", style=styles['sectionTitle']),
@@ -471,13 +471,7 @@ def update_tree_chart(data):
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
-            "formatter": "function(params) {"
-                         "var data = params.data;"
-                         "return data.name + '<br/>' +"
-                         "'Level: ' + data.level + '<br/>' +"
-                         "'Type: ' + data.type + '<br/>' +"
-                         "(data.description ? 'Description: ' + data.description : '');"
-                         "}"
+            "formatter": "function(params) { var data = params.data; return data.name + '<br/>Level: ' + data.level + '<br/>Type: ' + data.type + '<br/>' + (data.description ? 'Description: ' + data.description : ''); }"
         },
         "series": [
             {
@@ -524,7 +518,7 @@ def update_tree_chart(data):
         ]
     }
 
-# Callback to populate item-codes-dropdown
+# Callback to populate item callback
 @app.callback(
     Output("item-codes-dropdown", "options"),
     Input("item-codes-dropdown", "search_value"),
@@ -560,7 +554,7 @@ def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, ge
         varTraceTarget = None
         
         if item_codes_val:
-            varTraceFor = "', '".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
+            varTraceFor = "', '" .join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
             varTraceTarget = None
         
         GenOrTrc = gen_trc_val if gen_trc_val else "all"
@@ -603,7 +597,7 @@ def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, ge
                     'IngredientItemCode': row.get('ingredient_itemcode', ''),
                     'IngredientName': row.get('IngredientDescription', ''),
                     'IngredientPN': row.get('endnode', ''),
-                    'CntRecs': row.get('CntRecs', 0),
+                    'CntRecs': row.get('CntRecs', '')
                 })
             
             filtered_data = mapped_data
@@ -626,7 +620,7 @@ def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, ge
 clientside_callback(
     """
     function(filterModel, rowData) {
-        console.log('Filter model changed:', filterModel);
+        console.log('Filter model changed:', filterModel.toString());
         console.log('Row data:', rowData);
 
         if (!rowData || rowData.length === 0) {
@@ -710,7 +704,7 @@ def export_filtered_data(n_clicks, filtered_data):
         try:
             df = pd.DataFrame(filtered_data)
             print(f"Exporting {len(df)} filtered rows")
-            return dict(content=df.to_csv(index=False), filename="genealogy_filtered_data.csv")
+            return dict(content=df.to_csv(index=False), filename="genealogy_data_filtered.csv")
         except Exception as e:
             print(f"Filtered export error: {e}")
             return dash.no_update
@@ -746,7 +740,7 @@ clientside_callback(
             return window.dash_clientside.no_update;
         }
 
-        console.log('Export visualization button clicked, attempting to download PNG');
+        console.log('Export visualization button clicked, attempting to download');
 
         const chartElement = document.getElementById('tree-chart');
         if (!chartElement) {
