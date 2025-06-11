@@ -226,7 +226,7 @@ styles = {
         'border': 'none',
         'borderRadius': '4px',
         'cursor': 'pointer',
-        'transition': 'background-color 0.2s',
+        'transition': 'left 0.5s ease-out',
         'width': '100%'
     },
     'checkboxLabel': {
@@ -237,7 +237,7 @@ styles = {
     },
     'checkbox': {
         'marginRight': '5px',
-        'verticalAlign': 'middle'
+        'verticalAlign': 'top'
     },
     'exportButton': {
         'backgroundColor': '#3498db',
@@ -245,19 +245,19 @@ styles = {
         'padding': '8px 24px',
         'fontSize': '14px',
         'border': 'none',
-        'borderRadius': '4px',
+        'borderRadius': '0px',
         'cursor': 'pointer',
         'transition': 'background-color 0.2s'
     },
     'clearButton': {
         'backgroundColor': '#E2EAF4',
-        'color': '#3498db',
+        'color': 'black',
         'padding': '8px 24px',
         'fontSize': '14px',
         'border': 'none',
-        'borderRadius': '4px',
+        'borderRadius': '0px',
         'cursor': 'pointer',
-        'transition': 'background-color 0.2s'
+        'transition': 'background-color 0 Demo Mode'
     }
 }
 
@@ -320,13 +320,25 @@ app.layout = html.Div([
                     )
                 ], style={'marginBottom': '15px'}),
             
-                # Level checkboxes and buttons
+                # Genealogy and Traceability radio buttons
                 html.Div([
-                    html.Div([
-                        html.Button("Submit", id="submit-button", style=styles['exportButton']),
-                        html.Button("Clear", id="clear-button", style=styles['clearButton'])
-                    ], style={'textAlign': 'right', 'marginBottom': '10px'}),
-                ])
+                    dcc.RadioItems(
+                        id='gen-trc-radio',
+                        options=[
+                            {'label': 'Genealogy', 'value': 'gen'},
+                            {'label': 'Traceability', 'value': 'trc'}
+                        ],
+                        value=None,
+                        labelStyle={**styles['checkboxLabel'], 'margin': '5px'},
+                        inputStyle=styles['checkbox']
+                    )
+                ], style={'marginBottom': '15px'}),
+                
+                # Submit and Clear buttons
+                html.Div([
+                    html.Button("Submit", id="submit-button", style=styles['exportButton']),
+                    html.Button("Clear", id="clear-button", style=styles['clearButton'])
+                ], style={'textAlign': 'right', 'marginBottom': '10px'}),
             ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px'}),
             
             # Right side - Data Required and Additional Filters (side by side)
@@ -594,11 +606,12 @@ def update_item_codes_options(search_value, value):
     [
         State('item-codes-dropdown', 'value'),
         State('unit-operation-dropdown', 'value'),
-        State('attribute-dropdown', 'value')
+        State('attribute-dropdown', 'value'),
+        State('gen-trc-radio', 'value')
     ],
     prevent_initial_call=True
 )
-def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val):
+def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, gen_trc_val):
     # Only process if Submit button was clicked and at least one item code is provided
     if not n_clicks or not item_codes_val:
         return [], [], {}  # Return empty list for rowData, all-data-store, and clear filterModel
@@ -612,10 +625,12 @@ def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val):
             # Pass item_codes_val only to varTraceFor
             varTraceFor = "', '".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
             varTraceTarget = None  # Set to None to mimic single input behavior
+        
+        # Set GenOrTrc based on radio button selection
+        GenOrTrc = gen_trc_val if gen_trc_val else "all"
             
         # Get lineage data from database
         outputType = "polars"
-        GenOrTrc = "gen"
         level = -99
         
         res = get_lineage(
@@ -792,15 +807,16 @@ def export_filtered_data(n_clicks, filtered_data):
         Output('all-data-store', 'data', allow_duplicate=True),
         Output('filtered-data-store', 'data', allow_duplicate=True),
         Output('unit-operation-dropdown', 'value'),
-        Output('attribute-dropdown', 'value')
+        Output('attribute-dropdown', 'value'),
+        Output('gen-trc-radio', 'value')
     ],
     [Input('clear-button', 'n_clicks')],
     prevent_initial_call=True
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, [], [], [], None, None  # Reset everything to empty
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, [], [], [], None, None, None  # Reset everything to empty
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 # Clientside callback to download the ECharts tree chart as PNG
 clientside_callback(
