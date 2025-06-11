@@ -3,7 +3,7 @@ from dash import dcc, html, Input, Output, callback, State, clientside_callback
 from dash_echarts import DashECharts
 import dash_ag_grid as dag
 import pandas as pd
-from Lineage import get_item_codes, get_lineage, get_product_codes
+from Lineage import get_item_codes, get_lineage, get_product_codes, get_item_to_product_mapping
 from dash.exceptions import PreventUpdate
 from dotenv import load_dotenv
 
@@ -592,10 +592,13 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
             outputType,
             GenOrTrc,
             level,
-            outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
-                          root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
-                          root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription,
-                          COUNT(*) as CntRecs""",
+            outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, 
+                          product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
+                          root_unit_op_name as ParentName, product_unit_op_name as ProductName, 
+                          ingredient_unit_op_name as IngredientName,
+                          root_description as ParentDescription, product_description as ProductDescription, 
+                          ingredient_description as IngredientDescription,
+                          COUNT(*) as CntRecs"""
         )
         
         print("Database result:", res)
@@ -614,13 +617,7 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                 df_result['root_itemcode'].dropna().unique()
             )
             if item_codes:
-                query = f"""
-                    SELECT ItemCode, ProductCode
-                    FROM ItemMaster
-                    WHERE ItemCode IN ({','.join([f"'{code}'" for code in item_codes])})
-                """
-                product_map_df = engine.execute(query).pl().to_pandas()
-                item_to_product = dict(zip(product_map_df['ItemCode'], product_map_df['ProductCode']))
+                item_to_product = get_item_to_product_mapping(item_codes)
             
             mapped_data = []
             for _, row in df_result.iterrows():
@@ -628,7 +625,7 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                     'ParentItemCode': row.get('root_itemcode', ''),
                     'ParentName': row.get('ParentDescription', ''),
                     'ParentPN': row.get('root_parentlot', ''),
-                    'Level': row.get('Level', ''),
+                    'Level': row.get('level', ''),
                     'ProductItemCode': row.get('product_itemcode', ''),
                     'ProductName': row.get('ProductDescription', ''),
                     'ProductPN': row.get('startnode', ''),
