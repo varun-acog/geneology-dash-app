@@ -85,39 +85,34 @@ Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemc
 
 9. In the visualization on the tooltip show the Name and Description from the results.
 
-(This error originated from the built-in JavaScript code that runs Dash apps. Click to see the full stack trace or open your browser's console.)
-TypeError: Cannot read properties of undefined (reading '240be9b4aac9999f5910fa220cad295d314e9466a85e95905a5f2a59ed520827')
-
-    at _callee2$ (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75380:56)
-
-    at tryCatch (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:1062)
-
-    at Generator.<anonymous> (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:3008)
-
-    at Generator.next (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:1699)
-
-    at asyncGeneratorStep (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75205:70)
-
-    at _next (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:163)
-
-    at http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:299
-
-
-(geneology) [pr912591@hpcapps Lineage]$ python app2.py
-Dash is running on http://127.0.0.1:8050/
-
- * Serving Flask app 'app2'
- * Debug mode: on
-Error getting lineage data: Binder Error: Column "CntRecs" referenced that exists in the SELECT clause - but this column cannot be referenced before it is defined
-
+Database result: shape: (2_060, 16)
+┌──────┬────────────────┬───────────────┬──────────────┬───┬─────────────────────────────────┬─────────────────────────────────┬─────────┬───────────┐
+│ type ┆ root_parentlot ┆ root_itemcode ┆ startnode    ┆ … ┆ ProductDescription              ┆ IngredientDescription           ┆ CntRecs ┆ CntRecs_1 │
+│ ---  ┆ ---            ┆ ---           ┆ ---          ┆   ┆ ---                             ┆ ---                             ┆ ---     ┆ ---       │
+│ str  ┆ str            ┆ str           ┆ str          ┆   ┆ str                             ┆ str                             ┆ i64     ┆ i64       │
+╞══════╪════════════════╪═══════════════╪══════════════╪═══╪═════════════════════════════════╪═════════════════════════════════╪═════════╪═══════════╡
+│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ C0624-20114A ┆ … ┆ PRODUCTION OF RHASB IN THE GAL… ┆ TUBING ASSEMBLY 25 FOOT C-FLEX… ┆ 40      ┆ 40        │
+│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ M0612-20250  ┆ … ┆ MEDIA PRODUCTION ACF RHASB      ┆ BAG 1000L AEGIS FILM CUSTOM     ┆ 4       ┆ 4         │
+│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ C0624-20111A ┆ … ┆ PRODUCTION OF RHASB IN THE GAL… ┆ 0.2 M SODIUM CARBONATE, 0.5 N … ┆ 120     ┆ 120       │
+│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ P0601-20101  ┆ … ┆ COLUMN PACKING: BLUE SEPHAROSE… ┆ BFR NACL 0.5M                   ┆ 4       ┆ 4         │
+│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ M0612-20250  ┆ … ┆ MEDIA PRODUCTION ACF RHASB      ┆ FILTER SARTOPORE 2 MAXICAPS 0.… ┆ 4       ┆ 4         │
+│ …    ┆ …              ┆ …             ┆ …            ┆ … ┆ …                               ┆ …                               ┆ …       ┆ …         │
+│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ C0622-20114  ┆ … ┆ RHASB:   BIOREACTOR FOR INOCUL… ┆ TUBING ASSEMBLY CELL RETURN     ┆ 4       ┆ 4         │
+│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ P0606-20131  ┆ … ┆ RHASB:  PHENYL SEPHAROSE HIGH … ┆ EKV 10IN FILTER                 ┆ 4       ┆ 4         │
+│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ P0606-20131  ┆ … ┆ RHASB:  PHENYL SEPHAROSE HIGH … ┆ FILTER ASSEMBLY 5 IN SUPORLIFE… ┆ 4       ┆ 4         │
+│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ C0622-20114  ┆ … ┆ RHASB:   BIOREACTOR FOR INOCUL… ┆ PROBE DO 120MM OPTICAL MTTLR T… ┆ 4       ┆ 4         │
+│ Gen  ┆ P0607B-20132   ┆ P0607B        ┆ C0622-20114  ┆ … ┆ RHASB:   BIOREACTOR FOR INOCUL… ┆ TUBING ASSEMBLY Y MANIFOLD 2 M… ┆ 4       ┆ 4         │
+└──────┴────────────────┴───────────────┴──────────────┴───┴─────────────────────────────────┴─────────────────────────────────┴─────────┴───────────┘
 Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemcode', 'endnode', 'ingredient_itemcode', 'Level', 'ParentName', 'ProductName', 'IngredientName', 'ParentDescription', 'ProductDescription', 'IngredientDescription', 'CntRecs', 'CntRecs_1']
+ParentName values: ['ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS']
+Level values: [7, 10, 7, 13, 8]
+Database result: shape: (0, 16)
+┌──────┬────────────────┬───────────────┬───────────┬───┬────────────────────┬───────────────────────┬─────────┬───────────┐
+│ type ┆ root_parentlot ┆ root_itemcode ┆ startnode ┆ … ┆ ProductDescription ┆ IngredientDescription ┆ CntRecs ┆ CntRecs_1 │
+│ ---  ┆ ---            ┆ ---           ┆ ---       ┆   ┆ ---                ┆ ---                   ┆ ---     ┆ ---       │
+│ str  ┆ str            ┆ str           ┆ str       ┆   ┆ str                ┆ str                   ┆ i64     ┆ i64       │
+╞══════╪════════════════╪═══════════════╪═══════════╪═══╪════════════════════╪═══════════════════════╪═════════╪═══════════╡
+└──────┴────────────────┴───────────────┴───────────┴───┴────────────────────┴───────────────────────┴─────────┴───────────┘
+Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemcode', 'endnode', 'ingredient_itemcode', 'Level', 'ParentName', 'ProductName', 'IngredientName', 'ParentDescription', 'ProductDescription', 'IngredientDescription', 'CntRecs', 'CntRecs_1']
+No data returned from database
 
-  File "/home/users/pr912591/Lineage/Lineage/app2.py", line 454
-    style={'heightает-->:400px', 'width': '100%'},
-                                        ^
-SyntaxError: invalid syntax
-(geneology) [pr912591@hpcapps Lineage]$ python app2.py
-  File "/home/users/pr912591/Lineage/Lineage/app2.py", line 469
-    html.Button("Export Genealogy", id="export-genealogy-button", style={'-->:--button', 'marginBottom': '10px'}),
-                                                                                                       ^
-SyntaxError: invalid syntax
