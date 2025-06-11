@@ -3,7 +3,7 @@ from dash import dcc, html, Input, Output, callback, State, clientside_callback
 from dash_echarts import DashECharts
 import dash_ag_grid as dag
 import pandas as pd
-from Lineage import get_item_codes, get_lineage
+from Lineage import get_item_codes, get_lineage, get_product_codes
 from dash.exceptions import PreventUpdate
 from dotenv import load_dotenv
 
@@ -261,6 +261,15 @@ app.layout = html.Div([
                 html.H4("Filters", style=styles['sectionTitle']),
                 html.Div([
                     dcc.Dropdown(
+                        id='product-codes-dropdown',
+                        multi=False,
+                        clearable=True,
+                        placeholder='Select Product Code',
+                        style=styles['dropdown']
+                    )
+                ], style={'marginBottom': '15px'}),
+                html.Div([
+                    dcc.Dropdown(
                         id='item-codes-dropdown',
                         multi=True,
                         clearable=False,
@@ -380,6 +389,15 @@ app.layout = html.Div([
         ], style=styles['section'])
     ], style=styles['container'])
 ])
+
+# Callback to populate Product Codes dropdown
+@app.callback(
+    Output("product-codes-dropdown", "options"),
+    Input("product-codes-dropdown", "search_value"),
+    prevent_initial_call=True
+)
+def update_product_codes_options(search_value):
+    return get_product_codes(search_value)
 
 # Callback to populate Unit Operation dropdown with ProductItemCode-ProductName and IngredientItemCode-IngredientName
 @app.callback(
@@ -544,6 +562,7 @@ def update_item_codes_options(search_value, value):
     ],
     [Input('submit-button', 'n_clicks')],
     [
+        State('product-codes-dropdown', 'value'),
         State('item-codes-dropdown', 'value'),
         State('unit-operation-dropdown', 'value'),
         State('attribute-dropdown', 'value'),
@@ -551,7 +570,7 @@ def update_item_codes_options(search_value, value):
     ],
     prevent_initial_call=True
 )
-def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, gen_trc_val):
+def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val, attribute_val, gen_trc_val):
     if not n_clicks or not item_codes_val:
         return [], [], {}
     
@@ -588,9 +607,24 @@ def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, ge
             else:
                 df_result = res
             
+            # Map Item Codes to Product Codes
+            item_to_product = {}
+            item_codes = set(df_result['product_itemcode'].dropna().unique()).union(
+                df_result['ingredient_itemcode'].dropna().unique(),
+                df_result['root_itemcode'].dropna().unique()
+            )
+            if item_codes:
+                query = f"""
+                    SELECT ItemCode, ProductCode
+                    FROM ItemMaster
+                    WHERE ItemCode IN ({','.join([f"'{code}'" for code in item_codes])})
+                """
+                product_map_df = engine.execute(query).pl().to_pandas()
+                item_to_product = dict(zip(product_map_df['ItemCode'], product_map_df['ProductCode']))
+            
             mapped_data = []
             for _, row in df_result.iterrows():
-                mapped_data.append({
+                row_data = {
                     'ParentItemCode': row.get('root_itemcode', ''),
                     'ParentName': row.get('ParentDescription', ''),
                     'ParentPN': row.get('root_parentlot', ''),
@@ -602,14 +636,39 @@ def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, ge
                     'IngredientName': row.get('IngredientDescription', ''),
                     'IngredientPN': row.get('endnode', ''),
                     'CntRecs': row.get('CntRecs', 0),
-                })
+                }
+                # Add Product Codes for filtering
+                row_data['ProductCode'] = item_to_product.get(row_data['ProductItemCode'], None)
+                row_data['IngredientProductCode'] = item_to_product.get(row_data['IngredientItemCode'], None)
+                row_data['RootProductCode'] = item_to_product.get(row_data['ParentItemCode'], None)
+                mapped_data.append(row_data)
             
+            # Apply Product Code filter if selected
             filtered_data = mapped_data
-            if unit_operation_val:
+            if product_code_val:
                 filtered_data = [
                     row for row in mapped_data
+                    if (row['ProductCode'] == product_code_val or
+                        row['IngredientProductCode'] == product_code_val or
+                        row['RootProductCode'] == product_code_val)
+                ]
+            
+            # Apply Unit Operation filter if selected
+            if unit_operation_val:
+                filtered_data = [
+                    row for row in filtered_data
                     if (row['ProductItemCode'] in unit_operation_val or row['IngredientItemCode'] in unit_operation_val)
                 ]
+            
+            # Remove temporary Product Code fields
+            for row in filtered_data:
+                row.pop('ProductCode', None)
+                row.pop('IngredientProductCode', None)
+                row.pop('RootProductCode', None)
+            for row in mapped_data:
+                row.pop('ProductCode', None)
+                row.pop('IngredientProductCode', None)
+                row.pop('RootProductCode', None)
             
             return filtered_data, mapped_data, {}
         else:
@@ -782,6 +841,7 @@ def export_filtered_data(n_clicks, filtered_data):
 # Callback for Clear button
 @app.callback(
     [
+        Output('product-codes-dropdown', 'value'),
         Output('item-codes-dropdown', 'value'),
         Output('data-table', 'rowData', allow_duplicate=True),
         Output('all-data-store', 'data', allow_duplicate=True),
@@ -795,8 +855,8 @@ def export_filtered_data(n_clicks, filtered_data):
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, [], [], [], None, None, None
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, None, [], [], [], None, None, None
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True, port=8051)
