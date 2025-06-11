@@ -3,7 +3,6 @@ from dash import dcc, html, Input, Output, callback, State, clientside_callback
 from dash_echarts import DashECharts
 import dash_ag_grid as dag
 import pandas as pd
-import json
 from Lineage import get_item_codes, get_lineage
 from dash.exceptions import PreventUpdate
 from dotenv import load_dotenv
@@ -382,7 +381,7 @@ app.layout = html.Div([
     ], style=styles['container'])
 ])
 
-# Callback to populate Unit Operation dropdown
+# Callback to populate Unit Operation dropdown with ProductItemCode-ProductName and IngredientItemCode-IngredientName
 @app.callback(
     Output('unit-operation-dropdown', 'options'),
     Input('all-data-store', 'data'),
@@ -406,7 +405,7 @@ def update_unit_operation_options(data):
     # Map ingredient item codes to names
     for _, row in df[['IngredientItemCode', 'IngredientName']].dropna(subset=['IngredientItemCode']).iterrows():
         code = str(row['IngredientItemCode'])
-        name = str(row['IngredientName', '') if pd.notna() else 'Unknown'
+        name = str(row['IngredientName']) if pd.notnull(row['IngredientName']) else 'Unknown'
         if code not in ingredient_map:
             ingredient_map[code] = name
     
@@ -416,9 +415,9 @@ def update_unit_operation_options(data):
         options.append({'label': f"{code}-{name}", 'value': code})
     for code, name in ingredient_map.items():
         if code not in product_map:
-            options.append({'label': f"{code}-{name}"}, 'value': code})
+            options.append({'label': f"{code}-{name}", 'value': code})
     
-    return sorted(options, key=lambda x: x['x']['label'])
+    return sorted(options, key=lambda x: x['label'])
 
 # Callback to generate hierarchical data and update ECharts tree chart
 @app.callback(
@@ -428,6 +427,7 @@ def update_unit_operation_options(data):
 )
 def update_tree_chart(data):
     if not data:
+        print("No data provided to tree chart")
         return {}
 
     df = pd.DataFrame(data)
@@ -448,10 +448,12 @@ def update_tree_chart(data):
     }).dropna(subset=['root', 'source', 'ingredient'])
 
     if hierarchy_data.empty:
+        print("Hierarchy data is empty")
         return {}
 
     tree_data = csv_to_hierarchy_by_level(hierarchy_data)
     if not tree_data:
+        print("No tree data generated")
         return {}
     
     return {
@@ -528,22 +530,22 @@ def enable_export_button(chart_option):
     Input("item-codes-dropdown", "search_value"),
     State("item-codes-dropdown", "value")
 )
-def update_item_codes(search_value, value):
+def update_item_codes_options(search_value, value):
     if not search_value:
-        return []
+        raise PreventUpdate
     return get_item_codes(search_value)
 
 # Callback for interactive filtering
 @app.callback(
     [
-        Output('data-table', 'data'),
-        Output('all-data', 'store'),
-        Output('filter-data', 'model')
+        Output('data-table', 'rowData'),
+        Output('all-data-store', 'data'),
+        Output('data-table', 'filterModel')
     ],
     [Input('submit-button', 'n_clicks')],
     [
         State('item-codes-dropdown', 'value'),
-        State('unit-operation', 'dropdown'),
+        State('unit-operation-dropdown', 'value'),
         State('attribute-dropdown', 'value'),
         State('gen-trc-radio', 'value')
     ],
@@ -551,18 +553,18 @@ def update_item_codes(search_value, value):
 )
 def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, gen_trc_val):
     if not n_clicks or not item_codes_val:
-        return [], [], []
+        return [], [], {}
     
     try:
         varTraceFor = None
         varTraceTarget = None
         
         if item_codes_val:
-            varTraceFor = "', '"'.join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
+            varTraceFor = ", ".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
             varTraceTarget = None
         
         GenOrTrc = gen_trc_val if gen_trc_val else "all"
-        outputType = "polaris"
+        outputType = "polars"
         level = -99
         
         res = get_lineage(
