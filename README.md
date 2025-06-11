@@ -87,26 +87,10 @@ Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemc
 
 Now, in the additional filters sections, we have unit operations. In this unit operations, we are having Product Item Codes as filtering options, but now make it as "Product Item Code-Product Name" and "Ingredient Item Code-Ingredient Name" for both products and ingredients respectively
 
-(This error originated from the built-in JavaScript code that runs Dash apps. Click to see the full stack trace or open your browser's console.)
-TypeError: Cannot read properties of undefined (reading 'apply')
-
-    at _callee2$ (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75380:72)
-
-    at tryCatch (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:1062)
-
-    at Generator.<anonymous> (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:3008)
-
-    at Generator.next (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:1699)
-
-    at asyncGeneratorStep (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75205:70)
-
-    at _next (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:163)
-
-    at http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:299
-
-    at new Promise (<anonymous>)
-
-    at http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:90
-
-    at handleClientside (http://127.0.0.1:8051/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75331:28)
+ParentName values: ['ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS', 'ASB FBDS NOV ACF MEDIA PROCESS']
+Level values: [7, 9, 8, 7, 8]
+DataFrame shape: (2060, 11)
+Filtered DataFrame shape: (83, 11)
+Hierarchy data shape: (83, 8)
+Tree data: {'name': 'P0607B', 'description': 'ASB FBDS NOV ACF MEDIA PROCESS', 'children': [{'name': 'P0606-20131', 'description': 'RHASB:  PHENYL SEPHAROSE HIGH SUB CHROMATOGRAPHY', 'children': [{'name': 'P0603-20103', 'description': 'COLUMN PACKING:  PHENYL SEPHAROSE FF HI-SUB FOR RHASB', 'children': [{'name': 'P0614-20102', 'description': 'RESIN PREPPED PHENYL SEPH RHASB', 'children': [], 'id': 'P0614-20102', 'level': 4, 'type': 'ingredient'}], 'id': 'P0603-20103', 'level': 3, 'type': 'ingredient'}, {'name': 'P0605-20131', 'description': 'RHASB:  COPPER CHELATING SEPHAROSE FF CHROMATOGRAPHY', 'children':
 
