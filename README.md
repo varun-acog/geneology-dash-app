@@ -22,3 +22,21 @@ Columns: ['type', 'root_parentlot', 'root_itemcode', 'startnode', 'product_itemc
 Error getting lineage data: name 'engine' is not defined
 No data provided to tree chart
             
+Traceback (most recent call last)
+File "/home/users/pr912591/Lineage/Lineage/app.py", line 472, in update_tree_chart
+tree_data = csv_to_hierarchy_by_level(hierarchy_data)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/users/pr912591/Lineage/Lineage/app.py", line 55, in csv_to_hierarchy_by_level
+"level": level + 1,
+         ^^^^^^^^^
+TypeError: can only concatenate str (not "int") to str
+This is the Copy/Paste friendly version of the traceback.
+
+Traceback (most recent call last):
+  File "/home/users/pr912591/Lineage/Lineage/app.py", line 472, in update_tree_chart
+    tree_data = csv_to_hierarchy_by_level(hierarchy_data)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/users/pr912591/Lineage/Lineage/app.py", line 55, in csv_to_hierarchy_by_level
+    "level": level + 1,
+             ^^^^^^^^^^
+TypeError: can only concatenate str (not "int") to str
