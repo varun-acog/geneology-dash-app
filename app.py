@@ -22,7 +22,11 @@ def csv_to_hierarchy_by_level(csv_data):
         root_itemcode = row.get('root_itemcode', '')
         product_pn = row['source']
         ingredient_pn = row['ingredient']
-        level = row.get('level', 0)
+        # Convert Level to integer, default to 0 if invalid
+        try:
+            level = int(row.get('Level', 0))
+        except (ValueError, TypeError):
+            level = 0
         root_desc = row.get('root desc', '')
         source_desc = row.get('source desc', '')
         ingredient_desc = row.get('ingredient description', '')
@@ -593,7 +597,7 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
             GenOrTrc,
             level,
             outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, 
-                          product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level,
+                          product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level as Level,
                           root_unit_op_name as ParentName, product_unit_op_name as ProductName, 
                           ingredient_unit_op_name as IngredientName,
                           root_description as ParentDescription, product_description as ProductDescription, 
@@ -607,6 +611,8 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
         if res is not None and len(res) > 0:
             if hasattr(res, 'to_pandas'):
                 df_result = res.to_pandas()
+                # Ensure Level is integer
+                df_result['Level'] = pd.to_numeric(df_result['Level'], errors='coerce').fillna(0).astype(int)
             else:
                 df_result = res
             
@@ -625,7 +631,7 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                     'ParentItemCode': row.get('root_itemcode', ''),
                     'ParentName': row.get('ParentDescription', ''),
                     'ParentPN': row.get('root_parentlot', ''),
-                    'Level': row.get('level', ''),
+                    'Level': row.get('Level', 0),
                     'ProductItemCode': row.get('product_itemcode', ''),
                     'ProductName': row.get('ProductDescription', ''),
                     'ProductPN': row.get('startnode', ''),
