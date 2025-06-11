@@ -3,7 +3,7 @@ from dash import dcc, html, Input, Output, callback, State, clientside_callback
 from dash_echarts import DashECharts
 import dash_ag_grid as dag
 import pandas as pd
-from Lineage import get_item_codes, get_lineage, get_product_codes
+from Lineage import get_item_codes, get_lineage
 from dash.exceptions import PreventUpdate
 from dotenv import load_dotenv
 
@@ -261,13 +261,6 @@ app.layout = html.Div([
                 html.H4("Filters", style=styles['sectionTitle']),
                 html.Div([
                     dcc.Dropdown(
-                        id='product-code-dropdown',
-                        multi=False,
-                        clearable=True,
-                        placeholder='Select Product Code',
-                        style=styles['dropdown']
-                    ),
-                    dcc.Dropdown(
                         id='item-codes-dropdown',
                         multi=True,
                         clearable=False,
@@ -387,14 +380,6 @@ app.layout = html.Div([
         ], style=styles['section'])
     ], style=styles['container'])
 ])
-
-# Callback to populate Product Code dropdown
-@app.callback(
-    Output('product-code-dropdown', 'options'),
-    Input('product-code-dropdown', 'id')
-)
-def update_product_codes_options(_):
-    return get_product_codes()
 
 # Callback to populate Unit Operation dropdown with ProductItemCode-ProductName and IngredientItemCode-IngredientName
 @app.callback(
@@ -559,7 +544,6 @@ def update_item_codes_options(search_value, value):
     ],
     [Input('submit-button', 'n_clicks')],
     [
-        State('product-code-dropdown', 'value'),
         State('item-codes-dropdown', 'value'),
         State('unit-operation-dropdown', 'value'),
         State('attribute-dropdown', 'value'),
@@ -567,7 +551,7 @@ def update_item_codes_options(search_value, value):
     ],
     prevent_initial_call=True
 )
-def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val, attribute_val, gen_trc_val):
+def update_table(n_clicks, item_codes_val, unit_operation_val, attribute_val, gen_trc_val):
     if not n_clicks or not item_codes_val:
         return [], [], {}
     
@@ -593,7 +577,6 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                           root_unit_op_name as ParentName, product_unit_op_name as ProductName, ingredient_unit_op_name as IngredientName,
                           root_description as ParentDescription, product_description as ProductDescription, ingredient_description as IngredientDescription,
                           COUNT(*) as CntRecs""",
-            product_code=product_code_val
         )
         
         print("Database result:", res)
@@ -729,7 +712,7 @@ clientside_callback(
                 const dataURL = echartsInstance.getDataURL({
                     type: 'png',
                     pixelRatio: 2,
-                    backgroundColor': '#fff'
+                    backgroundColor: '#fff'
                 });
 
                 if (!dataURL) {
@@ -799,7 +782,6 @@ def export_filtered_data(n_clicks, filtered_data):
 # Callback for Clear button
 @app.callback(
     [
-        Output('product-code-dropdown', 'value'),
         Output('item-codes-dropdown', 'value'),
         Output('data-table', 'rowData', allow_duplicate=True),
         Output('all-data-store', 'data', allow_duplicate=True),
@@ -813,8 +795,8 @@ def export_filtered_data(n_clicks, filtered_data):
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], [], [], None, None, None
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, [], [], [], None, None, None
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True, port=8051)
