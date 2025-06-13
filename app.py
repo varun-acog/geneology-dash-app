@@ -279,7 +279,7 @@ app.layout = html.Div([
                         id='product-codes-dropdown',
                         multi=False,
                         clearable=True,
-                        placeholder='value': 'data-tab',
+                        placeholder='Select Product Code',
                         style=styles['dropdown']
                     )
                 ], style={'marginBottom': '15px'}),
@@ -389,7 +389,7 @@ app.layout = html.Div([
                         ])
                     ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
                 ]),
-                html.Div(id='visualization-tab-content', children=[
+                html.Div(id='visualization-tab-content', style={'display': 'none'}, children=[
                     html.H4("Visualization", style=styles['sectionTitle']),
                     html.Div([
                         html.Button("Export", id="export-visualization-button", style=styles['exportButton'], disabled=True)
