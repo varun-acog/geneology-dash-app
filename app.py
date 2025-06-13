@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html, Input, Output, callback, State, clientside_callback
+from dash import dcc, html, Input, Output, callback, State, clientside_callback, dash_table
 from dash_echarts import DashECharts
 import dash_ag_grid as dag
 import pandas as pd
@@ -282,13 +282,13 @@ app.layout = html.Div([
                     )
                 ], style={'marginBottom': '15px'}),
                 html.Div([
-                    dcc.RadioItems(
-                        id='gen-trc-radio',
+                    dcc.Checklist(
+                        id='gen-trc-checklist',
                         options=[
                             {'label': 'Genealogy', 'value': 'gen'},
                             {'label': 'Traceability', 'value': 'trc'}
                         ],
-                        value=None,
+                        value=[],
                         labelStyle={**styles['checkboxLabel'], 'margin': '5px'},
                         inputStyle=styles['checkbox']
                     )
@@ -414,32 +414,18 @@ def update_unit_operation_options(data):
         return []
     
     df = pd.DataFrame(data)
-    product_map = {}
-    ingredient_map = {}
     
-    # Map product item codes to names
-    for _, row in df[['ProductItemCode', 'ProductName']].dropna(subset=['ProductItemCode']).iterrows():
-        code = str(row['ProductItemCode'])
-        name = str(row['ProductName']) if pd.notnull(row['ProductName']) else 'Unknown'
-        if code not in product_map:
-            product_map[code] = name
+    # Get unique product and ingredient item codes
+    product_codes = set(df['ProductItemCode'].dropna().astype(str))
+    ingredient_codes = set(df['IngredientItemCode'].dropna().astype(str))
     
-    # Map ingredient item codes to names
-    for _, row in df[['IngredientItemCode', 'IngredientName']].dropna(subset=['IngredientItemCode']).iterrows():
-        code = str(row['IngredientItemCode'])
-        name = str(row['IngredientName']) if pd.notnull(row['IngredientName']) else 'Unknown'
-        if code not in ingredient_map:
-            ingredient_map[code] = name
+    # Combine and remove duplicates
+    all_codes = product_codes.union(ingredient_codes)
     
-    # Create dropdown options
-    options = []
-    for code, name in product_map.items():
-        options.append({'label': f"{code}-{name}", 'value': code})
-    for code, name in ingredient_map.items():
-        if code not in product_map:
-            options.append({'label': f"{code}-{name}", 'value': code})
+    # Create dropdown options with just the codes
+    options = [{'label': code, 'value': code} for code in sorted(all_codes)]
     
-    return sorted(options, key=lambda x: x['label'])
+    return options
 
 # Callback to generate hierarchical data and update ECharts tree chart
 @app.callback(
@@ -570,7 +556,7 @@ def update_item_codes_options(search_value, value):
         State('item-codes-dropdown', 'value'),
         State('unit-operation-dropdown', 'value'),
         State('attribute-dropdown', 'value'),
-        State('gen-trc-radio', 'value')
+        State('gen-trc-checklist', 'value')
     ],
     prevent_initial_call=True
 )
@@ -586,7 +572,15 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
             varTraceFor = ", ".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
             varTraceTarget = None
         
-        GenOrTrc = gen_trc_val if gen_trc_val else "all"
+        if gen_trc_val and len(gen_trc_val) > 0:
+            if len(gen_trc_val) == 2:  # Both selected
+                GenOrTrc = "all"
+            elif 'gen' in gen_trc_val:
+                GenOrTrc = "gen"
+            elif 'trc' in gen_trc_val:
+                GenOrTrc = "trc"
+        else:
+            GenOrTrc = "all"
         outputType = "polars"
         level = -99
         
@@ -851,14 +845,14 @@ def export_filtered_data(n_clicks, filtered_data):
         Output('filtered-data-store', 'data', allow_duplicate=True),
         Output('unit-operation-dropdown', 'value'),
         Output('attribute-dropdown', 'value'),
-        Output('gen-trc-radio', 'value')
+        Output('gen-trc-checklist', 'value')
     ],
     [Input('clear-button', 'n_clicks')],
     prevent_initial_call=True
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], [], [], None, None, None
+        return None, None, [], [], [], None, None, []
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
