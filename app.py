@@ -222,6 +222,17 @@ styles = {
         'borderRadius': '4px',
         'cursor': 'pointer',
         'transition': 'background-color 0.2s'
+    },
+    'tab': {
+        'fontSize': '14px',
+        'fontWeight': '600',
+        'color': '#2c3e50',
+        'padding': '10px 20px'
+    },
+    'tabSelected': {
+        'backgroundColor': '#3498db',
+        'color': '#ffffff',
+        'borderRadius': '4px 4px 0 0'
     }
 }
 
@@ -341,55 +352,61 @@ app.layout = html.Div([
             ], style={'width': '65%', 'display': 'inline-block', 'verticalAlign': 'top'})
         ], style=styles['section']),
         html.Div([
-            html.Div([
-                html.H4("Visualization", style=styles['sectionTitle']),
-                html.Div([
-                    html.Button("Export", id="export-visualization-button", style=styles['exportButton'], disabled=True)
-                ], style={'textAlign': 'right', 'marginBottom': '10px'}),
-                dcc.Loading(
-                    id="loading-tree-chart",
-                    type="default",
-                    children=[
-                        DashECharts(
-                            id='tree-chart',
-                            option={},
-                            style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+            dcc.Tabs(id="tabs", value='data-tab', children=[
+                dcc.Tab(label='Data', value='data-tab', style=styles['tab'], selected_style={**styles['tab'], **styles['tabSelected']}),
+                dcc.Tab(label='Visualization', value='visualization-tab', style=styles['tab'], selected_style={**styles['tab'], **styles['tabSelected']}),
+            ]),
+            html.Div(id='tabs-content', children=[
+                html.Div(id='data-tab-content', style={'display': 'block' if 'data-tab' else 'none'}, children=[
+                    html.Div([
+                        html.H4("Data", style=styles['sectionTitle']),
+                        dcc.Loading(
+                            id="loading-data-table",
+                            type="default",
+                            children=[
+                                dag.AgGrid(
+                                    id='data-table',
+                                    columnDefs=columnDefs,
+                                    rowData=[],
+                                    defaultColDef=defaultColDef,
+                                    style={'height': '400px', 'width': '100%'},
+                                    dashGridOptions={
+                                        "pagination": True,
+                                        "paginationPageSize": 20,
+                                        "suppressExcelExport": False,
+                                        "suppressCsvExport": False,
+                                    },
+                                    className="ag-theme-alpine",
+                                    enableEnterpriseModules=False
+                                )
+                            ]
                         )
-                    ]
-                )
-            ])
-        ], style=styles['section']),
-        html.Div([
-            html.Div([
-                html.H4("Data", style=styles['sectionTitle']),
-                dcc.Loading(
-                    id="loading-data-table",
-                    type="default",
-                    children=[
-                        dag.AgGrid(
-                            id='data-table',
-                            columnDefs=columnDefs,
-                            rowData=[],
-                            defaultColDef=defaultColDef,
-                            style={'height': '400px', 'width': '100%'},
-                            dashGridOptions={
-                                "pagination": True,
-                                "paginationPageSize": 20,
-                                "suppressExcelExport": False,
-                                "suppressCsvExport": False,
-                            },
-                            className="ag-theme-alpine",
-                            enableEnterpriseModules=False
-                        )
-                    ]
-                )
-            ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
-            html.Div([
-                html.Div([
-                    html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'marginBottom': '10px'}),
-                    html.Button("Export with Required Data", id="export-filtered-button", style=styles['primaryButton'])
+                    ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
+                    html.Div([
+                        html.Div([
+                            html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'marginBottom': '10px'}),
+                            html.Button("Export with Required Data", id="export-filtered-button", style=styles['primaryButton'])
+                        ])
+                    ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
+                ]),
+                html.Div(id='visualization-tab-content', style={'display': 'none' if 'data-tab' else 'block'}, children=[
+                    html.H4("Visualization", style=styles['sectionTitle']),
+                    html.Div([
+                        html.Button("Export", id="export-visualization-button", style=styles['exportButton'], disabled=True)
+                    ], style={'textAlign': 'right', 'marginBottom': '10px'}),
+                    dcc.Loading(
+                        id="loading-tree-chart",
+                        type="default",
+                        children=[
+                            DashECharts(
+                                id='tree-chart',
+                                option={},
+                                style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+                            )
+                        ]
+                    )
                 ])
-            ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
+            ], style=styles['section'])
         ], style=styles['section'])
     ], style=styles['container'])
 ])
