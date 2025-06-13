@@ -279,7 +279,7 @@ app.layout = html.Div([
                         id='product-codes-dropdown',
                         multi=False,
                         clearable=True,
-                        placeholder='Select Product Code',
+                        placeholder='value': 'data-tab',
                         style=styles['dropdown']
                     )
                 ], style={'marginBottom': '15px'}),
@@ -357,7 +357,7 @@ app.layout = html.Div([
                 dcc.Tab(label='Visualization', value='visualization-tab', style=styles['tab'], selected_style={**styles['tab'], **styles['tabSelected']}),
             ]),
             html.Div(id='tabs-content', children=[
-                html.Div(id='data-tab-content', style={'display': 'block' if 'data-tab' else 'none'}, children=[
+                html.Div(id='data-tab-content', children=[
                     html.Div([
                         html.H4("Data", style=styles['sectionTitle']),
                         dcc.Loading(
@@ -389,7 +389,7 @@ app.layout = html.Div([
                         ])
                     ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
                 ]),
-                html.Div(id='visualization-tab-content', style={'display': 'none' if 'data-tab' else 'block'}, children=[
+                html.Div(id='visualization-tab-content', children=[
                     html.H4("Visualization", style=styles['sectionTitle']),
                     html.Div([
                         html.Button("Export", id="export-visualization-button", style=styles['exportButton'], disabled=True)
@@ -410,6 +410,45 @@ app.layout = html.Div([
         ], style=styles['section'])
     ], style=styles['container'])
 ])
+
+# Clientside callback to handle tab switching and trigger ECharts resize
+clientside_callback(
+    """
+    function(tabValue) {
+        console.log('Selected tab:', tabValue);
+        
+        // Update visibility of tab content
+        const dataTab = document.getElementById('data-tab-content');
+        const vizTab = document.getElementById('visualization-tab-content');
+        
+        if (dataTab) {
+            dataTab.style.display = tabValue === 'data-tab' ? 'block' : 'none';
+        }
+        if (vizTab) {
+            vizTab.style.display = tabValue === 'visualization-tab' ? 'block' : 'none';
+        }
+        
+        // If visualization tab is selected, trigger ECharts resize
+        if (tabValue === 'visualization-tab') {
+            const chartElement = document.getElementById('tree-chart');
+            if (chartElement && window.echarts) {
+                const echartsInstance = window.echarts.getInstanceByDom(chartElement);
+                if (echartsInstance) {
+                    setTimeout(() => {
+                        echartsInstance.resize();
+                        console.log('ECharts resized on visualization tab activation');
+                    }, 100); // Small delay to ensure DOM is updated
+                }
+            }
+        }
+        
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('tabs-content', 'children'),
+    Input('tabs', 'value'),
+    prevent_initial_call=True
+)
 
 # Callback to populate Product Codes dropdown
 @app.callback(
