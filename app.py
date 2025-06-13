@@ -13,7 +13,6 @@ load_dotenv()
 def csv_to_hierarchy_by_level(csv_data):
     """Create a level-based hierarchy where ProductPN at level N has IngredientPN children,
     and those IngredientPNs become ProductPNs at level N+1"""
-    print(f"csv_to_hierarchy_by_level: Input data shape: {csv_data.shape}")
     node_info = {}
     relationships = []
     
@@ -65,8 +64,6 @@ def csv_to_hierarchy_by_level(csv_data):
         
         relationships.append((product_pn, ingredient_pn, level))
     
-    print(f"csv_to_hierarchy_by_level: {len(node_info)} nodes, {len(relationships)} relationships")
-    
     # Find root nodes
     all_children = set(child for parent, child, level in relationships)
     root_candidates = [node for node in node_info.keys() if node not in all_children or node_info[node]["type"] == "root"]
@@ -117,9 +114,7 @@ def csv_to_hierarchy_by_level(csv_data):
         
         return node_data
     
-    tree_data = build_tree_node(root_node)
-    print(f"csv_to_hierarchy_by_level: Tree data generated: {bool(tree_data)}")
-    return tree_data
+    return build_tree_node(root_node)
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
@@ -238,12 +233,6 @@ styles = {
         'backgroundColor': '#3498db',
         'color': '#ffffff',
         'borderRadius': '4px 4px 0 0'
-    },
-    'noDataMessage': {
-        'textAlign': 'center',
-        'color': '#7f8c8d',
-        'fontSize': '16px',
-        'marginTop': '20px'
     }
 }
 
@@ -400,7 +389,7 @@ app.layout = html.Div([
                         ])
                     ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
                 ]),
-                html.Div(id='visualization-tab-content', style={'display': 'none'}, children=[
+                html.Div(id='visualization-tab-content', children=[
                     html.H4("Visualization", style=styles['sectionTitle']),
                     html.Div([
                         html.Button("Export", id="export-visualization-button", style=styles['exportButton'], disabled=True)
@@ -409,18 +398,11 @@ app.layout = html.Div([
                         id="loading-tree-chart",
                         type="default",
                         children=[
-                            html.Div(id='tree-chart-container', children=[
-                                DashECharts(
-                                    id='tree-chart',
-                                    option={},
-                                    style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
-                                ),
-                                html.Div(
-                                    id='no-data-message',
-                                    children="No data available for visualization. Please submit a query with valid item codes.",
-                                    style={**styles['noDataMessage'], 'display': 'none'}
-                                )
-                            ])
+                            DashECharts(
+                                id='tree-chart',
+                                option={},
+                                style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+                            )
                         ]
                     )
                 ])
@@ -449,22 +431,14 @@ clientside_callback(
         // If visualization tab is selected, trigger ECharts resize
         if (tabValue === 'visualization-tab') {
             const chartElement = document.getElementById('tree-chart');
-            if (!chartElement) {
-                console.error('Tree chart element not found');
-                return window.dash_clientside.no_update;
-            }
-            if (!window.echarts) {
-                console.error('ECharts library not loaded');
-                return window.dash_clientside.no_update;
-            }
-            const echartsInstance = window.echarts.getInstanceByDom(chartElement);
-            if (echartsInstance) {
-                setTimeout(() => {
-                    echartsInstance.resize();
-                    console.log('ECharts resized on visualization tab activation');
-                }, 100); // Small delay to ensure DOM is updated
-            } else {
-                console.warn('No ECharts instance found for tree-chart; may not be initialized yet');
+            if (chartElement && window.echarts) {
+                const echartsInstance = window.echarts.getInstanceByDom(chartElement);
+                if (echartsInstance) {
+                    setTimeout(() => {
+                        echartsInstance.resize();
+                        console.log('ECharts resized on visualization tab activation');
+                    }, 100); // Small delay to ensure DOM is updated
+                }
             }
         }
         
@@ -476,29 +450,55 @@ clientside_callback(
     prevent_initial_call=True
 )
 
-# Callback to update tree chart and no-data message visibility
+# Callback to populate Product Codes dropdown
 @app.callback(
-    [
-        Output('tree-chart', 'option'),
-        Output('no-data-message', 'style'),
-        Output('tree-chart-container', 'style')
-    ],
+    Output("product-codes-dropdown", "options"),
+    Input("product-codes-dropdown", "search_value"),
+    prevent_initial_call=True
+)
+def update_product_codes_options(search_value):
+    return get_product_codes(search_value)
+
+# Callback to populate Unit Operation dropdown with ProductItemCode-ProductName and IngredientItemCode-IngredientName
+@app.callback(
+    Output('unit-operation-dropdown', 'options'),
+    Input('all-data-store', 'data'),
+    prevent_initial_call=True
+)
+def update_unit_operation_options(data):
+    if not data:
+        return []
+    
+    df = pd.DataFrame(data)
+    
+    # Get unique product and ingredient item codes
+    product_codes = set(df['ProductItemCode'].dropna().astype(str))
+    ingredient_codes = set(df['IngredientItemCode'].dropna().astype(str))
+    
+    # Combine and remove duplicates
+    all_codes = product_codes.union(ingredient_codes)
+    
+    # Create dropdown options with just the codes
+    options = [{'label': code, 'value': code} for code in sorted(all_codes)]
+    
+    return options
+
+# Callback to generate hierarchical data and update ECharts tree chart
+@app.callback(
+    Output('tree-chart', 'option'),
     Input('all-data-store', 'data'),
     prevent_initial_call=True
 )
 def update_tree_chart(data):
     if not data:
-        print("update_tree_chart: No data provided to tree chart")
-        return {}, {'display': 'block'}, {'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+        print("No data provided to tree chart")
+        return {}
 
     df = pd.DataFrame(data)
-    print(f"update_tree_chart: Input DataFrame shape: {df.shape}")
-    
     filtered_df = df[
         ~df['ProductPN'].str.upper().str.startswith(('Z', 'B', 'M'), na=False) &
         ~df['IngredientPN'].str.upper().str.startswith(('Z', 'B', 'M'), na=False)
     ]
-    print(f"update_tree_chart: Filtered DataFrame shape: {filtered_df.shape}")
     
     hierarchy_data = pd.DataFrame({
         'root': filtered_df['ParentPN'],
@@ -510,18 +510,17 @@ def update_tree_chart(data):
         'ingredient description': filtered_df['IngredientName'],
         'level': filtered_df['Level'],
     }).dropna(subset=['root', 'source', 'ingredient'])
-    print(f"update_tree_chart: Hierarchy DataFrame shape: {hierarchy_data.shape}")
 
     if hierarchy_data.empty:
-        print("update_tree_chart: Hierarchy data is empty")
-        return {}, {'display': 'block'}, {'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+        print("Hierarchy data is empty")
+        return {}
 
     tree_data = csv_to_hierarchy_by_level(hierarchy_data)
     if not tree_data:
-        print("update_tree_chart: No tree data generated")
-        return {}, {'display': 'block'}, {'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+        print("No tree data generated")
+        return {}
     
-    chart_option = {
+    return {
         "tooltip": {
             "trigger": "item",
             "triggerOn": "mousemove",
@@ -579,8 +578,6 @@ def update_tree_chart(data):
             }
         ]
     }
-    print("update_tree_chart: Chart option generated successfully")
-    return chart_option, {'display': 'none'}, {'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
 
 # Callback to enable/disable export visualization button
 @app.callback(
@@ -589,44 +586,18 @@ def update_tree_chart(data):
     prevent_initial_call=True
 )
 def enable_export_button(chart_option):
-    disabled = not bool(chart_option)
-    print(f"enable_export_button: Export button disabled={disabled}")
-    return disabled
+    return not bool(chart_option)  # Enable button if chart_option is non-empty
 
-# Callback to populate Product Codes dropdown
+# Callback to populate item-codes-dropdown
 @app.callback(
-    Output("product-codes-dropdown", "options"),
-    Input("product-codes-dropdown", "search_value"),
-    prevent_initial_call=True
+    Output("item-codes-dropdown", "options"),
+    Input("item-codes-dropdown", "search_value"),
+    State("item-codes-dropdown", "value")
 )
-def update_product_codes_options(search_value):
-    return get_product_codes(search_value)
-
-# Callback to populate Unit Operation dropdown with ProductItemCode-ProductName and IngredientItemCode-IngredientName
-@app.callback(
-    Output('unit-operation-dropdown', 'options'),
-    Input('all-data-store', 'data'),
-    prevent_initial_call=True
-)
-def update_unit_operation_options(data):
-    if not data:
-        print("update_unit_operation_options: No data provided")
-        return []
-    
-    df = pd.DataFrame(data)
-    print(f"update_unit_operation_options: DataFrame shape: {df.shape}")
-    
-    # Get unique product and ingredient item codes
-    product_codes = set(df['ProductItemCode'].dropna().astype(str))
-    ingredient_codes = set(df['IngredientItemCode'].dropna().astype(str))
-    
-    # Combine and remove duplicates
-    all_codes = product_codes.union(ingredient_codes)
-    
-    # Create dropdown options with just the codes
-    options = [{'label': code, 'value': code} for code in sorted(all_codes)]
-    print(f"update_unit_operation_options: {len(options)} options generated")
-    return options
+def update_item_codes_options(search_value, value):
+    if not search_value:
+        raise PreventUpdate
+    return get_item_codes(search_value)
 
 # Callback for interactive filtering
 @app.callback(
@@ -647,7 +618,6 @@ def update_unit_operation_options(data):
 )
 def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val, attribute_val, gen_trc_val):
     if not n_clicks or not item_codes_val:
-        print("update_table: No clicks or no item codes selected")
         return [], [], {}
     
     try:
@@ -657,7 +627,6 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
         if item_codes_val:
             varTraceFor = ", ".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
             varTraceTarget = None
-            print(f"update_table: varTraceFor={varTraceFor}")
         
         if gen_trc_val and len(gen_trc_val) > 0:
             if len(gen_trc_val) == 2:  # Both selected
@@ -668,8 +637,6 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                 GenOrTrc = "trc"
         else:
             GenOrTrc = "all"
-        print(f"update_table: GenOrTrc={GenOrTrc}")
-        
         outputType = "polars"
         level = -99
         
@@ -688,8 +655,8 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                           COUNT(*) as CntRecs"""
         )
         
-        print("update_table: Database result:", res)
-        print("update_table: Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
+        print("Database result:", res)
+        print("Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
         
         if res is not None and len(res) > 0:
             if hasattr(res, 'to_pandas'):
@@ -698,7 +665,6 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                 df_result['Level'] = pd.to_numeric(df_result['Level'], errors='coerce').fillna(0).astype(int)
             else:
                 df_result = res
-            print(f"update_table: Result DataFrame shape: {df_result.shape}")
             
             # Map Item Codes to Product Codes
             item_to_product = {}
@@ -708,7 +674,6 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
             )
             if item_codes:
                 item_to_product = get_item_to_product_mapping(item_codes)
-                print(f"update_table: {len(item_to_product)} item-to-product mappings")
             
             mapped_data = []
             for _, row in df_result.iterrows():
@@ -740,7 +705,6 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                         row['IngredientProductCode'] == product_code_val or
                         row['RootProductCode'] == product_code_val)
                 ]
-                print(f"update_table: After product code filter, {len(filtered_data)} rows")
             
             # Apply Unit Operation filter if selected
             if unit_operation_val:
@@ -748,7 +712,6 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                     row for row in filtered_data
                     if (row['ProductItemCode'] in unit_operation_val or row['IngredientItemCode'] in unit_operation_val)
                 ]
-                print(f"update_table: After unit operation filter, {len(filtered_data)} rows")
             
             # Remove temporary Product Code fields
             for row in filtered_data:
@@ -760,14 +723,13 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                 row.pop('IngredientProductCode', None)
                 row.pop('RootProductCode', None)
             
-            print(f"update_table: Returning {len(filtered_data)} filtered rows, {len(mapped_data)} total rows")
             return filtered_data, mapped_data, {}
         else:
-            print("update_table: No data returned from database")
+            print("No data returned from database")
             return [], [], {}
             
     except Exception as e:
-        print(f"update_table: Error getting lineage data: {e}")
+        print(f"Error getting lineage data: {e}")
         return [], [], {}
 
 # Clientside callback to update filtered data
@@ -775,7 +737,7 @@ clientside_callback(
     """
     function(filterModel, rowData) {
         console.log('Filter model changed:', filterModel);
-        console.log('Row data length:', rowData ? rowData.length : 'No row data');
+        console.log('Row data:', rowData);
 
         if (!rowData || rowData.length === 0) {
             console.log('No row data available, skipping filter processing');
@@ -900,10 +862,9 @@ def export_all_data(n_clicks, all_data):
     if n_clicks and all_data:
         try:
             df = pd.DataFrame(all_data)
-            print(f"export_all_data: Exporting {len(df)} rows")
             return dict(content=df.to_csv(index=False), filename="genealogy_all_data.csv")
         except Exception as e:
-            print(f"export_all_data: Export error: {e}")
+            print(f"Export error: {e}")
             return dash.no_update
     return dash.no_update
 
@@ -921,13 +882,13 @@ def export_filtered_data(n_clicks, filtered_data):
     if filtered_data is not None and len(filtered_data) > 0:
         try:
             df = pd.DataFrame(filtered_data)
-            print(f"export_filtered_data: Exporting {len(df)} filtered rows")
+            print(f"Exporting {len(df)} filtered rows")
             return dict(content=df.to_csv(index=False), filename="genealogy_filtered_data.csv")
         except Exception as e:
-            print(f"export_filtered_data: Filtered export error: {e}")
+            print(f"Filtered export error: {e}")
             return dash.no_update
     else:
-        print("export_filtered_data: No filtered data available")
+        print("No filtered data available")
         return dash.no_update
 
 # Callback for Clear button
@@ -947,7 +908,6 @@ def export_filtered_data(n_clicks, filtered_data):
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        print("clear_filters: Clearing all filters and data")
         return None, None, [], [], [], None, None, []
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
