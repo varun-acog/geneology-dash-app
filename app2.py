@@ -308,6 +308,14 @@ app.layout = html.Div([
                         value=[],
                         labelStyle={**styles['checkboxLabel'], 'margin': '5px'},
                         inputStyle=styles['checkbox']
+                    ),
+                    dcc.Checklist(
+                        id='include-individual-bags-check',
+                        options=[{'label': 'Include Individual Bags', 'value': 'individual_bags'}],
+                        value=[],
+                        labelStyle={**styles['checkboxLabel'], 'margin': '5px'},
+                        inputStyle=styles['checkbox'],
+                        style={'marginTop': '10px'}
                     )
                 ], style={'marginBottom': '15px'}),
                 html.Div([
@@ -671,11 +679,12 @@ def update_checklist_based_on_lookup(lookup_value):
         State('item-codes-dropdown', 'value'),
         State('unit-operation-dropdown', 'value'),
         State('attribute-dropdown', 'value'),
-        State('gen-trc-checklist', 'value')
+        State('gen-trc-checklist', 'value'),
+        State('include-individual-bags-check', 'value')
     ],
     prevent_initial_call=True
 )
-def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val, attribute_val, gen_trc_val):
+def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val, attribute_val, gen_trc_val, include_individual_bags_val):
     if not n_clicks or not item_codes_val:
         return [], [], {}
     
@@ -699,19 +708,30 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
         outputType = "polars"
         level = -99
         
+        # Use product_lot and ingredient_lot if "Include Individual Bags" is checked
+        outputcols = """type, root_parentlot, root_itemcode, product_parentlot as startnode, 
+                        product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level as Level,
+                        root_unit_op_name as ParentName, product_unit_op_name as ProductName, 
+                        ingredient_unit_op_name as IngredientName,
+                        root_description as ParentDescription, product_description as ProductDescription, 
+                        ingredient_description as IngredientDescription,
+                        COUNT(*) as CntRecs"""
+        if include_individual_bags_val and 'individual_bags' in include_individual_bags_val:
+            outputcols = """type, root_parentlot, root_itemcode, product_lot as startnode, 
+                           product_itemcode, ingredient_lot as endnode, ingredient_itemcode, level as Level,
+                           root_unit_op_name as ParentName, product_unit_op_name as ProductName, 
+                           ingredient_unit_op_name as IngredientName,
+                           root_description as ParentDescription, product_description as ProductDescription, 
+                           ingredient_description as IngredientDescription,
+                           COUNT(*) as CntRecs"""
+
         res = get_lineage(
             varTraceFor,
             varTraceTarget,
             outputType,
             GenOrTrc,
             level,
-            outputcols="""type, root_parentlot, root_itemcode, product_parentlot as startnode, 
-                          product_itemcode, ingredient_parentlot as endnode, ingredient_itemcode, level as Level,
-                          root_unit_op_name as ParentName, product_unit_op_name as ProductName, 
-                          ingredient_unit_op_name as IngredientName,
-                          root_description as ParentDescription, product_description as ProductDescription, 
-                          ingredient_description as IngredientDescription,
-                          COUNT(*) as CntRecs"""
+            outputcols=outputcols
         )
         
         print("Database result:", res)
@@ -948,15 +968,16 @@ def export_filtered_data(n_clicks, filtered_data):
         Output('unit-operation-dropdown', 'value'),
         Output('attribute-dropdown', 'value'),
         Output('gen-trc-checklist', 'value', allow_duplicate=True),
-        Output('lookup-type-dropdown', 'value')
+        Output('lookup-type-dropdown', 'value'),
+        Output('include-individual-bags-check', 'value', allow_duplicate=True)
     ],
     [Input('clear-button', 'n_clicks')],
     prevent_initial_call=True
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], [], [], None, None, [], None
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, None, [], [], [], None, None, [], None, []
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True, port=8051)
