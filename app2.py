@@ -22,7 +22,7 @@ def csv_to_hierarchy_by_level(csv_data):
         ingredient_pn = row['ingredient']
         try:
             level = int(row.get('Level', 0))
-        except (ValueError, TypeError):
+        except (ValueError, TypeTypeError):
             level = 0
         root_desc = row.get('root desc', '')
         source_desc = row.get('source desc', '')
@@ -154,7 +154,7 @@ styles = {
         'paddingLeft': '10px'
     },
     'dropdown': {
-        'width': '100%',
+        'width': '50%',  # Reduced width
         'fontSize': '14px',
         'borderRadius': '4px',
         'marginBottom': '10px'
@@ -287,9 +287,7 @@ app.layout = html.Div([
                         clearable=True,
                         placeholder='Select Product Code',
                         style=styles['dropdown']
-                    )
-                ], style={'marginBottom': '15px'}),
-                html.Div([
+                    ),
                     dcc.Dropdown(
                         id='item-codes-dropdown',
                         multi=True,
@@ -297,7 +295,7 @@ app.layout = html.Div([
                         placeholder='Select Item Codes',
                         style=styles['dropdown']
                     )
-                ], style={'marginBottom': '15px'}),
+                ], style={'display': 'flex', 'flexDirection': 'column', 'gap': '10px'}),
                 html.Div([
                     dcc.Checklist(
                         id='gen-trc-checklist',
@@ -306,8 +304,17 @@ app.layout = html.Div([
                             {'label': 'Traceability', 'value': 'trc'}
                         ],
                         value=[],
-                        labelStyle={**styles['checkboxLabel'], 'margin': '5px'},
-                        inputStyle=styles['checkbox']
+                        labelStyle={**styles['checkboxLabel'], 'margin': '5px 0'},  # Vertical alignment
+                        inputStyle=styles['checkbox'],
+                        style={'display': 'block'}  # Ensure vertical stacking
+                    ),
+                    dcc.Checklist(
+                        id='include-individual-bags-check',
+                        options=[{'label': 'Include Individual Bags', 'value': 'individual_bags'}],
+                        value=[],
+                        labelStyle={**styles['checkboxLabel'], 'margin': '5px 0'},
+                        inputStyle=styles['checkbox'],
+                        style={'display': 'block', 'marginTop': '10px'}
                     )
                 ], style={'marginBottom': '15px'}),
                 html.Div([
