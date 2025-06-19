@@ -656,7 +656,7 @@ def update_checklist_based_on_lookup(lookup_value):
     elif lookup_value == 'consumed':
         return ['trc']
     elif lookup_value == 'where_used':
-        return []  # No functionality for "Where Used"
+        return []
     return []
 
 @app.callback(
@@ -873,7 +873,7 @@ clientside_callback(
                 const dataURL = echartsInstance.getDataURL({
                     type: 'png',
                     pixelRatio: 2,
-                    backgroundColor: '#fff'
+                    backgroundColor': '#fff'
                 });
 
                 if (!dataURL) {
@@ -947,7 +947,7 @@ def export_filtered_data(n_clicks, filtered_data):
         Output('filtered-data-store', 'data', allow_duplicate=True),
         Output('unit-operation-dropdown', 'value'),
         Output('attribute-dropdown', 'value'),
-        Output('gen-trc-checklist', 'value'),
+        Output('gen-trc-checklist', 'value', allow_duplicate=True),
         Output('lookup-type-dropdown', 'value')
     ],
     [Input('clear-button', 'n_clicks')],
