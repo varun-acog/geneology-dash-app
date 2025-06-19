@@ -9,21 +9,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Also update your csv_to_hierarchy_by_level function to ensure proper data structure
-
 def csv_to_hierarchy_by_level(csv_data):
     """Create a level-based hierarchy where ProductPN at level N has IngredientPN children,
     and those IngredientPNs become ProductPNs at level N+1"""
     node_info = {}
     relationships = []
     
-    # Collect unique nodes and their information
     for _, row in csv_data.iterrows():
         root_pn = row['root']
         root_itemcode = row.get('root_itemcode', '')
         product_pn = row['source']
         ingredient_pn = row['ingredient']
-        # Convert Level to integer, default to 0 if invalid
         try:
             level = int(row.get('Level', 0))
         except (ValueError, TypeError):
@@ -32,7 +28,6 @@ def csv_to_hierarchy_by_level(csv_data):
         source_desc = row.get('source desc', '')
         ingredient_desc = row.get('ingredient description', '')
         
-        # Add root node (level 0)
         if root_pn not in node_info:
             node_info[root_pn] = {
                 "name": root_itemcode if root_itemcode else root_pn,
@@ -41,37 +36,32 @@ def csv_to_hierarchy_by_level(csv_data):
                 "type": "root"
             }
         
-        # Add product node
         if product_pn not in node_info:
             node_info[product_pn] = {
-                "name": product_pn,  # This will be the node display name (ProductPN)
-                "description": source_desc,  # This will be the ProductName for tooltip
+                "name": product_pn,
+                "description": source_desc,
                 "level": level,
                 "type": "product"
             }
         else:
             node_info[product_pn]["level"] = min(node_info[product_pn]["level"], level)
-            # Update description if it's empty
             if not node_info[product_pn]["description"] and source_desc:
                 node_info[product_pn]["description"] = source_desc
         
-        # Add ingredient node
         if ingredient_pn not in node_info:
             node_info[ingredient_pn] = {
-                "name": ingredient_pn,  # This will be the node display name (IngredientPN)
-                "description": ingredient_desc,  # This will be the IngredientName for tooltip
+                "name": ingredient_pn,
+                "description": ingredient_desc,
                 "level": level + 1,
                 "type": "ingredient"
             }
         else:
             node_info[ingredient_pn]["level"] = min(node_info[ingredient_pn]["level"], level + 1)
-            # Update description if it's empty
             if not node_info[ingredient_pn]["description"] and ingredient_desc:
                 node_info[ingredient_pn]["description"] = ingredient_desc
         
         relationships.append((product_pn, ingredient_pn, level))
     
-    # Find root nodes
     all_children = set(child for parent, child, level in relationships)
     root_candidates = [node for node in node_info.keys() if node not in all_children or node_info[node]["type"] == "root"]
     
@@ -89,14 +79,12 @@ def csv_to_hierarchy_by_level(csv_data):
             if info["level"] == 0:
                 relationships.append((root_node, node, -1))
     
-    # Build parent-to-children mapping
     parent_to_children = {}
     for parent, child, level in relationships:
         if parent not in parent_to_children:
             parent_to_children[parent] = []
         parent_to_children[parent].append(child)
     
-    # Recursive function to build tree
     def build_tree_node(node_id, visited=None):
         if visited is None:
             visited = set()
@@ -105,13 +93,12 @@ def csv_to_hierarchy_by_level(csv_data):
         visited.add(node_id)
         
         node_data = {
-            "name": node_info[node_id]["name"],  # ProductPN (for display)
-            "description": node_info[node_id]["description"],  # ProductName (for tooltip)
+            "name": node_info[node_id]["name"],
+            "description": node_info[node_id]["description"],
             "children": [],
             "id": node_id,
             "level": node_info[node_id]["level"],
             "type": node_info[node_id]["type"],
-            # Keep value as description for backward compatibility
             "value": node_info[node_id]["description"] if node_info[node_id]["description"] else node_info[node_id]["name"]
         }
         
@@ -125,10 +112,8 @@ def csv_to_hierarchy_by_level(csv_data):
     
     return build_tree_node(root_node)
 
-# Initialize the Dash app
 app = dash.Dash(__name__)
 
-# Define custom styles
 styles = {
     'container': {
         'maxWidth': '1400px',
@@ -245,7 +230,6 @@ styles = {
     }
 }
 
-# AG Grid column definitions with filtering enabled
 columnDefs = [
     {"field": "ParentItemCode", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
     {"field": "ParentName", "filter": "agTextColumnFilter", "filterParams": {"filterOptions": ["contains"], "suppressAndOrCondition": True}},
@@ -260,7 +244,6 @@ columnDefs = [
     {"field": "CntRecs", "filter": "agNumberColumnFilter", "filterParams": {"filterOptions": ["equals"], "suppressAndOrCondition": True}}
 ]
 
-# AG Grid default column properties
 defaultColDef = {
     "sortable": True,
     "filter": True,
@@ -270,7 +253,6 @@ defaultColDef = {
     "headerStyle": {"backgroundColor": "#2c3e50", "color": "#ffffff", "fontWeight": "600", "fontSize": "14px"}
 }
 
-# Define the layout
 app.layout = html.Div([
     dcc.Download(id="download-all-data"),
     dcc.Download(id="download-filtered-data"),
@@ -283,6 +265,21 @@ app.layout = html.Div([
         html.Div([
             html.Div([
                 html.H4("Filters", style=styles['sectionTitle']),
+                html.Div([
+                    dcc.Dropdown(
+                        id='lookup-type-dropdown',
+                        options=[
+                            {'label': 'Everything went into making the Lot/Item', 'value': 'making'},
+                            {'label': 'Link between the two Lots', 'value': 'link'},
+                            {'label': 'Where the Lot got Used/Consumed', 'value': 'consumed'},
+                            {'label': 'Where Used', 'value': 'where_used'}
+                        ],
+                        multi=False,
+                        clearable=True,
+                        placeholder='What are you looking for?',
+                        style=styles['dropdown']
+                    )
+                ], style={'marginBottom': '15px'}),
                 html.Div([
                     dcc.Dropdown(
                         id='product-codes-dropdown',
@@ -420,13 +417,11 @@ app.layout = html.Div([
     ], style=styles['container'])
 ])
 
-# Clientside callback to handle tab switching and trigger ECharts resize
 clientside_callback(
     """
     function(tabValue) {
         console.log('Selected tab:', tabValue);
         
-        // Update visibility of tab content
         const dataTab = document.getElementById('data-tab-content');
         const vizTab = document.getElementById('visualization-tab-content');
         
@@ -437,7 +432,6 @@ clientside_callback(
             vizTab.style.display = tabValue === 'visualization-tab' ? 'block' : 'none';
         }
         
-        // If visualization tab is selected, trigger ECharts resize
         if (tabValue === 'visualization-tab') {
             const chartElement = document.getElementById('tree-chart');
             if (chartElement && window.echarts) {
@@ -446,7 +440,7 @@ clientside_callback(
                     setTimeout(() => {
                         echartsInstance.resize();
                         console.log('ECharts resized on visualization tab activation');
-                    }, 100); // Small delay to ensure DOM is updated
+                    }, 100);
                 }
             }
         }
@@ -459,7 +453,6 @@ clientside_callback(
     prevent_initial_call=True
 )
 
-# Callback to populate Product Codes dropdown
 @app.callback(
     Output("product-codes-dropdown", "options"),
     Input("product-codes-dropdown", "search_value"),
@@ -468,7 +461,6 @@ clientside_callback(
 def update_product_codes_options(search_value):
     return get_product_codes(search_value)
 
-# Callback to populate Unit Operation dropdown with ProductItemCode-ProductName and IngredientItemCode-IngredientName
 @app.callback(
     Output('unit-operation-dropdown', 'options'),
     Input('all-data-store', 'data'),
@@ -480,20 +472,14 @@ def update_unit_operation_options(data):
     
     df = pd.DataFrame(data)
     
-    # Get unique product and ingredient item codes
     product_codes = set(df['ProductItemCode'].dropna().astype(str))
     ingredient_codes = set(df['IngredientItemCode'].dropna().astype(str))
     
-    # Combine and remove duplicates
     all_codes = product_codes.union(ingredient_codes)
     
-    # Create dropdown options with just the codes
     options = [{'label': code, 'value': code} for code in sorted(all_codes)]
     
     return options
-
-# Callback to generate hierarchical data and update ECharts tree chart
-# Replace your existing tree chart callback with this updated version
 
 @app.callback(
     Output('tree-chart', 'option'),
@@ -559,7 +545,7 @@ def update_tree_chart(data):
                     "verticalAlign": "middle",
                     "align": "right",
                     "fontSize": 10,
-                    "formatter": "{b}"  # This will show the ProductPN
+                    "formatter": "{b}"
                 },
                 "leaves": {
                     "label": {
@@ -567,7 +553,7 @@ def update_tree_chart(data):
                         "verticalAlign": "middle",
                         "align": "left",
                         "fontSize": 10,
-                        "formatter": "{b}"  # This will show the ProductPN
+                        "formatter": "{b}"
                     }
                 },
                 "emphasis": {
@@ -592,17 +578,14 @@ def update_tree_chart(data):
         ]
     }
 
-# Add this clientside callback to handle custom tooltip formatting
 clientside_callback(
     """
     function() {
-        // Wait for ECharts to be available and chart to be rendered
         setTimeout(function() {
             const chartElement = document.getElementById('tree-chart');
             if (chartElement && window.echarts) {
                 const chart = window.echarts.getInstanceByDom(chartElement);
                 if (chart) {
-                    // Set custom tooltip formatter
                     chart.setOption({
                         tooltip: {
                             formatter: function(params) {
@@ -630,7 +613,7 @@ clientside_callback(
                     console.log('Custom tooltip formatter applied');
                 }
             }
-        }, 1000); // Give some time for the chart to render
+        }, 1000);
         
         return window.dash_clientside.no_update;
     }
@@ -640,16 +623,14 @@ clientside_callback(
     prevent_initial_call=True
 )
 
-# Callback to enable/disable export visualization button
 @app.callback(
     Output('export-visualization-button', 'disabled'),
     Input('tree-chart', 'option'),
     prevent_initial_call=True
 )
 def enable_export_button(chart_option):
-    return not bool(chart_option)  # Enable button if chart_option is non-empty
+    return not bool(chart_option)
 
-# Callback to populate item-codes-dropdown
 @app.callback(
     Output("item-codes-dropdown", "options"),
     Input("item-codes-dropdown", "search_value"),
@@ -660,7 +641,24 @@ def update_item_codes_options(search_value, value):
         raise PreventUpdate
     return get_item_codes(search_value)
 
-# Callback for interactive filtering
+@app.callback(
+    Output('gen-trc-checklist', 'value'),
+    Input('lookup-type-dropdown', 'value'),
+    prevent_initial_call=True
+)
+def update_checklist_based_on_lookup(lookup_value):
+    if not lookup_value:
+        return []
+    if lookup_value == 'making':
+        return ['gen']
+    elif lookup_value == 'link':
+        return ['gen', 'trc']
+    elif lookup_value == 'consumed':
+        return ['trc']
+    elif lookup_value == 'where_used':
+        return []  # No functionality for "Where Used"
+    return []
+
 @app.callback(
     [
         Output('data-table', 'rowData'),
@@ -690,7 +688,7 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
             varTraceTarget = None
         
         if gen_trc_val and len(gen_trc_val) > 0:
-            if len(gen_trc_val) == 2:  # Both selected
+            if len(gen_trc_val) == 2:
                 GenOrTrc = "all"
             elif 'gen' in gen_trc_val:
                 GenOrTrc = "gen"
@@ -716,27 +714,16 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                           COUNT(*) as CntRecs"""
         )
         
-        
-        # outputcols="""type, root_parentlot, root_itemcode, product_lot as startnode,
-        #                   product_itemcode, ingredient_lot as endnode, ingredient_itemcode, level as Level,
-        #                   root_unit_op_name as ParentName, product_unit_op_name as ProductName, 
-        #                   ingredient_unit_op_name as IngredientName,
-        #                   root_description as ParentDescription, product_description as ProductDescription, 
-        #                   ingredient_description as IngredientDescription,
-        #                   COUNT(*) as CntRecs"""
-        
         print("Database result:", res)
         print("Columns:", res.columns if hasattr(res, 'columns') else 'No columns attribute')
         
         if res is not None and len(res) > 0:
             if hasattr(res, 'to_pandas'):
                 df_result = res.to_pandas()
-                # Ensure Level is integer
                 df_result['Level'] = pd.to_numeric(df_result['Level'], errors='coerce').fillna(0).astype(int)
             else:
                 df_result = res
             
-            # Map Item Codes to Product Codes
             item_to_product = {}
             item_codes = set(df_result['product_itemcode'].dropna().unique()).union(
                 df_result['ingredient_itemcode'].dropna().unique(),
@@ -760,13 +747,11 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                     'IngredientPN': row.get('endnode', ''),
                     'CntRecs': row.get('CntRecs', 0),
                 }
-                # Add Product Codes for filtering
                 row_data['ProductCode'] = item_to_product.get(row_data['ProductItemCode'], None)
                 row_data['IngredientProductCode'] = item_to_product.get(row_data['IngredientItemCode'], None)
                 row_data['RootProductCode'] = item_to_product.get(row_data['ParentItemCode'], None)
                 mapped_data.append(row_data)
             
-            # Apply Product Code filter if selected
             filtered_data = mapped_data
             if product_code_val:
                 filtered_data = [
@@ -776,14 +761,12 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                         row['RootProductCode'] == product_code_val)
                 ]
             
-            # Apply Unit Operation filter if selected
             if unit_operation_val:
                 filtered_data = [
                     row for row in filtered_data
                     if (row['ProductItemCode'] in unit_operation_val or row['IngredientItemCode'] in unit_operation_val)
                 ]
             
-            # Remove temporary Product Code fields
             for row in filtered_data:
                 row.pop('ProductCode', None)
                 row.pop('IngredientProductCode', None)
@@ -802,7 +785,6 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
         print(f"Error getting lineage data: {e}")
         return [], [], {}
 
-# Clientside callback to update filtered data
 clientside_callback(
     """
     function(filterModel, rowData) {
@@ -858,7 +840,6 @@ clientside_callback(
     prevent_initial_call=True
 )
 
-# Clientside callback to download ECharts tree chart as PNG
 clientside_callback(
     """
     function(n_clicks) {
@@ -869,7 +850,6 @@ clientside_callback(
 
         console.log('Export visualization button clicked, attempting to download PNG');
 
-        // Check if ECharts is available
         if (!window.echarts) {
             console.error('ECharts library not loaded');
             return window.dash_clientside.no_update;
@@ -881,7 +861,6 @@ clientside_callback(
             return window.dash_clientside.no_update;
         }
 
-        // Add a small delay to ensure chart is initialized
         return new Promise((resolve) => {
             setTimeout(() => {
                 const echartsInstance = window.echarts.getInstanceByDom(chartElement);
@@ -912,7 +891,7 @@ clientside_callback(
 
                 console.log('PNG download triggered successfully');
                 resolve(window.dash_clientside.no_update);
-            }, 500); // 500ms delay to ensure chart is ready
+            }, 500);
         });
     }
     """,
@@ -921,7 +900,6 @@ clientside_callback(
     prevent_initial_call=True
 )
 
-# Server-side callback for Export Genealogy
 @app.callback(
     Output("download-all-data", "data"),
     [Input('export-genealogy-button', 'n_clicks')],
@@ -938,7 +916,6 @@ def export_all_data(n_clicks, all_data):
             return dash.no_update
     return dash.no_update
 
-# Server-side callback for Export with Required Data
 @app.callback(
     Output("download-filtered-data", "data"),
     [Input('export-filtered-button', 'n_clicks')],
@@ -961,7 +938,6 @@ def export_filtered_data(n_clicks, filtered_data):
         print("No filtered data available")
         return dash.no_update
 
-# Callback for Clear button
 @app.callback(
     [
         Output('product-codes-dropdown', 'value'),
@@ -971,15 +947,16 @@ def export_filtered_data(n_clicks, filtered_data):
         Output('filtered-data-store', 'data', allow_duplicate=True),
         Output('unit-operation-dropdown', 'value'),
         Output('attribute-dropdown', 'value'),
-        Output('gen-trc-checklist', 'value')
+        Output('gen-trc-checklist', 'value'),
+        Output('lookup-type-dropdown', 'value')
     ],
     [Input('clear-button', 'n_clicks')],
     prevent_initial_call=True
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], [], [], None, None, []
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, None, [], [], [], None, None, [], None
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True, port=8051)
