@@ -389,7 +389,7 @@ app.layout = html.Div([
                                     columnDefs=columnDefs,
                                     rowData=[],
                                     defaultColDef=defaultColDef,
-                                    style={'height': '600px', 'width': '100%'},  # Increased height from 400px to 600px
+                                    style={'height': '600px', 'width': '100%'},
                                     dashGridOptions={
                                         "pagination": True,
                                         "paginationPageSize": 20,
@@ -401,9 +401,7 @@ app.layout = html.Div([
                                 )
                             ]
                         )
-                    ], style={'width': '100%', 'display': 'inline-block', 'paddingRight': '20px'}),
-                    html.Div([
-                    ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
+                    ], style={'width': '100%', 'display': 'inline-block', 'paddingRight': '0'})
                 ]),
                 html.Div(id='visualization-tab-content', children=[
                     html.H4("Visualization", style=styles['sectionTitle']),
@@ -673,7 +671,8 @@ def update_checklist_based_on_lookup(lookup_value):
     [
         Output('data-table', 'rowData'),
         Output('all-data-store', 'data'),
-        Output('data-table', 'filterModel')
+        Output('data-table', 'filterModel'),
+        Output('data-table', 'columnDefs', allow_duplicate=True)
     ],
     [Input('submit-button', 'n_clicks')],
     [
@@ -682,13 +681,14 @@ def update_checklist_based_on_lookup(lookup_value):
         State('unit-operation-dropdown', 'value'),
         State('attribute-dropdown', 'value'),
         State('gen-trc-checklist', 'value'),
-        State('include-individual-bags-check', 'value')
+        State('include-individual-bags-check', 'value'),
+        State('data-table', 'rowData')
     ],
     prevent_initial_call=True
 )
-def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val, attribute_val, gen_trc_val, include_individual_bags_val):
+def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val, attribute_val, gen_trc_val, include_individual_bags_val, current_row_data):
     if not n_clicks or not item_codes_val:
-        return [], [], {}
+        return [], [], {}, columnDefs
     
     try:
         varTraceFor = None
@@ -798,14 +798,21 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
                 row.pop('IngredientProductCode', None)
                 row.pop('RootProductCode', None)
             
-            return filtered_data, mapped_data, {}
+            # Update columnDefs with unique values for set filters (simulating Filters... dropdown)
+            updated_column_defs = columnDefs.copy()
+            if current_row_data and len(current_row_data) > 0:
+                for col_def in updated_column_defs:
+                    if col_def["filter"] == "agTextColumnFilter":
+                        col_def["filterParams"]["filterOptions"] = ["contains", {"filter": "agSetColumnFilter", "values": sorted(list(set(row[col_def["field"]] for row in current_row_data if row[col_def["field"]])))}]
+            
+            return filtered_data, mapped_data, {}, updated_column_defs
         else:
             print("No data returned from database")
-            return [], [], {}
+            return [], [], {}, columnDefs
             
     except Exception as e:
         print(f"Error getting lineage data: {e}")
-        return [], [], {}
+        return [], [], {}, columnDefs
 
 clientside_callback(
     """
@@ -838,11 +845,8 @@ clientside_callback(
                         passesFilter = false;
                         break;
                     }
-                }
-                else if (filter.type === 'equals') {
-                    const rowNum = parseFloat(rowValue);
-                    const filterNum = parseFloat(filter.filter);
-                    if (isNaN(rowNum) || rowNum !== filterNum) {
+                } else if (filter.type === 'set') {
+                    if (filter.values && filter.values.length > 0 && !filter.values.includes(rowValue)) {
                         passesFilter = false;
                         break;
                     }
