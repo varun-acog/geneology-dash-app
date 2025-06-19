@@ -401,7 +401,7 @@ app.layout = html.Div([
                                 )
                             ]
                         )
-                    ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
+                    ], style={'width': '100%', 'display': 'inline-block', 'paddingRight': '20px'}),
                     html.Div([
                     ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
                 ]),
