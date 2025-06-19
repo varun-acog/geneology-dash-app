@@ -374,6 +374,12 @@ app.layout = html.Div([
                 html.Div(id='data-tab-content', children=[
                     html.Div([
                         html.H4("Data", style=styles['sectionTitle']),
+                        html.Div([
+                            html.Div([
+                                html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'marginBottom': '10px', 'width': 'auto'}),
+                                html.Button("Export with Required Data", id="export-filtered-button", style={**styles['primaryButton'], 'width': 'auto'})
+                            ], style={'textAlign': 'right', 'marginBottom': '10px'})
+                        ]),
                         dcc.Loading(
                             id="loading-data-table",
                             type="default",
@@ -383,7 +389,7 @@ app.layout = html.Div([
                                     columnDefs=columnDefs,
                                     rowData=[],
                                     defaultColDef=defaultColDef,
-                                    style={'height': '400px', 'width': '100%'},
+                                    style={'height': '600px', 'width': '100%'},  # Increased height from 400px to 600px
                                     dashGridOptions={
                                         "pagination": True,
                                         "paginationPageSize": 20,
@@ -397,10 +403,6 @@ app.layout = html.Div([
                         )
                     ], style={'width': '70%', 'display': 'inline-block', 'paddingRight': '20px'}),
                     html.Div([
-                        html.Div([
-                            html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'marginBottom': '10px'}),
-                            html.Button("Export with Required Data", id="export-filtered-button", style=styles['primaryButton'])
-                        ])
                     ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top'})
                 ]),
                 html.Div(id='visualization-tab-content', children=[
