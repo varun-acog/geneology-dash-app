@@ -12,28 +12,10 @@ Where the Lot got Used/Consumed(when this is selected, only Traceability check b
 Where Used(Put it as it is for now no functionality)
 
 
-Cannot read properties of undefined (reading 'apply')
-5:35:27 PM
-Cannot read properties of undefined (reading 'apply')
-(This error originated from the built-in JavaScript code that runs Dash apps. Click to see the full stack trace or open your browser's console.)
-TypeError: Cannot read properties of undefined (reading 'apply')
-
-    at _callee2$ (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75380:72)
-
-    at tryCatch (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:1062)
-
-    at Generator.<anonymous> (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:3008)
-
-    at Generator.next (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75199:1699)
-
-    at asyncGeneratorStep (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75205:70)
-
-    at _next (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:163)
-
-    at http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:299
-
-    at new Promise (<anonymous>)
-
-    at http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75206:90
-
-    at _handleClientside (http://127.0.0.1:8050/_dash-component-suites/dash/dash-renderer/build/dash_renderer.v3_0_4m1748338401.dev.js:75455:28)
+Duplicate callback outputs
+5:44:04 PM
+In the callback for output(s): filtered-data-store.data Output 0 (filtered-data-store.data) is already in use. To resolve this, set `allow_duplicate=True` on duplicate outputs, or combine the outputs into one callback function, distinguishing the trigger by using `dash.callback_context` if necessary.
+Duplicate callback outputs
+5:44:04 PM
+In the callback for output(s): product-codes-dropdown.value item-codes-dropdown.value unit-operation-dropdown.value attribute-dropdown.value gen-trc-checklist.value lookup-type-dropdown.value include-individual-bags-check.value target-lot-item-dropdown.value filter-dropdown-ParentItemCode.value filter-dropdown-ParentName.value filter-dropdown-ParentPN.value filter-dropdown-Level.value filter-dropdown-ProductItemCode.value filter-dropdown-ProductName.value filter-dropdown-ProductPN.value filter-dropdown-IngredientItemCode.value filter-dropdown-IngredientName.value filter-dropdown-IngredientPN.value filter-dropdown-CntRecs.value Output 4 (gen-trc-checklist.value) is already in use. To resolve this, set `allow_duplicate=True` on duplicate outputs, or combine the outputs into one callback function, distinguishing the trigger by using `dash.callback_context` if necessary.
+   
