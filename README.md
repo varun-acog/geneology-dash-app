@@ -11,9 +11,16 @@ Where the Lot got Used/Consumed(when this is selected, only Traceability check b
 
 Where Used(Put it as it is for now no functionality)
 
-Callback error updating data-table.rowData@75c7acc98c53cde072cd5ae467f52de28e27537bd4ab9d225c7e8fac025a11ed
-TypeError: apply_column_filters() missing 1 required keyword-only argument: 'all_data'
 
-Traceback (most recent call last)
-This is the Copy/Paste friendly version of the traceback.
-TypeError: apply_column_filters() missing 1 required keyword-only argument: 'all_data'
+Duplicate callback outputs
+5:10:29 PM
+In the callback for output(s): filtered-data-store.data Output 0 (filtered-data-store.data) is already in use. To resolve this, set `allow_duplicate=True` on duplicate outputs, or combine the outputs into one callback function, distinguishing the trigger by using `dash.callback_context` if necessary.
+Duplicate callback outputs
+5:10:29 PM
+In the callback for output(s): product-codes-dropdown.value item-codes-dropdown.value data-table.rowData all-data-store.data filtered-data-store.data unit-operation-dropdown.value attribute-dropdown.value gen-trc-checklist.value lookup-type-dropdown.value include-individual-bags-check.value target-lot-item-dropdown.value Output 7 (gen-trc-checklist.value) is already in use. To resolve this, set `allow_duplicate=True` on duplicate outputs, or combine the outputs into one callback function, distinguishing the trigger by using `dash.callback_context` if necessary.
+Duplicate callback outputs
+5:10:29 PM
+In the callback for output(s): product-codes-dropdown.value item-codes-dropdown.value data-table.rowData all-data-store.data filtered-data-store.data unit-operation-dropdown.value attribute-dropdown.value gen-trc-checklist.value lookup-type-dropdown.value include-individual-bags-check.value target-lot-item-dropdown.value Output 3 (all-data-store.data) is already in use. To resolve this, set `allow_duplicate=True` on duplicate outputs, or combine the outputs into one callback function, distinguishing the trigger by using `dash.callback_context` if necessary.
+Duplicate callback outputs
+5:10:29 PM
+In the callback for output(s): product-codes-dropdown.value item-codes-dropdown.value data-table.rowData all-data-store.data filtered-data-store.data unit-operation-dropdown.value attribute-dropdown.value gen-trc-checklist.value lookup-type-dropdown.value include-individual-bags-check.value target-lot-item-dropdown.value Output 2 (data-table.rowData) is already in use. To resolve this, set `allow_duplicate=True` on duplicate outputs, or combine the outputs into one callback function, distinguishing the trigger by using `dash.callback_context` if necessary.
