@@ -307,7 +307,7 @@ app.layout = html.Div([
                             placeholder='Select Product Code',
                             style=styles['dropdown']
                         )
-                    ], style={'width': '58%', 'display': 'inline-block', 'verticalAlign': 'top'}),
+                    ], style={'width': '54%', 'display': 'inline-block', 'verticalAlign': 'top'}),
 
                     # Right Half: Genealogy / Traceability checkboxes + Target Lot/Item
                     html.Div([
