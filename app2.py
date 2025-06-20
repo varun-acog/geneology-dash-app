@@ -304,12 +304,12 @@ app.layout = html.Div([
                             id='product-codes-dropdown',
                             multi=False,
                             clearable=True,
-                            placeholder='Select Item Code',
+                            placeholder='Select Product Code',
                             style=styles['dropdown']
                         )
                     ], style={'width': '58%', 'display': 'inline-block', 'verticalAlign': 'top'}),
 
-                    # Right Half: Genealogy / Traceability checkboxes
+                    # Right Half: Genealogy / Traceability checkboxes + Target Lot/Item
                     html.Div([
                         dcc.Checklist(
                             id='gen-trc-checklist',
@@ -320,6 +320,14 @@ app.layout = html.Div([
                             value=[],
                             labelStyle={**styles['checkboxLabel'], 'display': 'block', 'margin': '5px 0'},
                             inputStyle=styles['checkbox']
+                        ),
+                        dcc.Dropdown(
+                            id='target-lot-item-dropdown',
+                            multi=True,
+                            clearable=False,
+                            placeholder='Target Lot/Item',
+                            style=styles['dropdown'],
+                            disabled=True
                         )
                     ], style={'width': '37%', 'display': 'inline-block', 'verticalAlign': 'top', 'marginLeft': '5%'})
                 ], style={'marginBottom': '15px'}),
@@ -496,6 +504,17 @@ def update_product_codes_options(search_value):
     return get_product_codes(search_value)
 
 @app.callback(
+    Output("target-lot-item-dropdown", "options"),
+    Input("target-lot-item-dropdown", "search_value"),
+    State("target-lot-item-dropdown", "value"),
+    prevent_initial_call=True
+)
+def update_target_lot_item_options(search_value, value):
+    if not search_value:
+        raise PreventUpdate
+    return get_item_codes(search_value)
+
+@app.callback(
     Output('unit-operation-dropdown', 'options'),
     Input('all-data-store', 'data'),
     prevent_initial_call=True
@@ -514,6 +533,14 @@ def update_unit_operation_options(data):
     options = [{'label': code, 'value': code} for code in sorted(all_codes)]
     
     return options
+
+@app.callback(
+    Output('target-lot-item-dropdown', 'disabled'),
+    Input('lookup-type-dropdown', 'value'),
+    prevent_initial_call=True
+)
+def toggle_target_lot_item_dropdown(lookup_value):
+    return lookup_value != 'link'
 
 @app.callback(
     Output('tree-chart', 'option'),
@@ -708,11 +735,12 @@ def update_checklist_based_on_lookup(lookup_value):
         State('attribute-dropdown', 'value'),
         State('gen-trc-checklist', 'value'),
         State('include-individual-bags-check', 'value'),
-        State('data-table', 'rowData')
+        State('data-table', 'rowData'),
+        State('target-lot-item-dropdown', 'value')
     ],
     prevent_initial_call=True
 )
-def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val, attribute_val, gen_trc_val, include_individual_bags_val, current_row_data):
+def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val, attribute_val, gen_trc_val, include_individual_bags_val, current_row_data, target_lot_item_val):
     if not n_clicks or not item_codes_val:
         return [], [], {}, columnDefs
     
@@ -722,7 +750,9 @@ def update_table(n_clicks, product_code_val, item_codes_val, unit_operation_val,
         
         if item_codes_val:
             varTraceFor = ", ".join(item_codes_val) if isinstance(item_codes_val, list) else str(item_codes_val)
-            varTraceTarget = None
+        
+        if target_lot_item_val:
+            varTraceTarget = ", ".join(target_lot_item_val) if isinstance(target_lot_item_val, list) else str(target_lot_item_val)
         
         if gen_trc_val and len(gen_trc_val) > 0:
             if len(gen_trc_val) == 2:
@@ -1001,15 +1031,16 @@ def export_filtered_data(n_clicks, filtered_data):
         Output('attribute-dropdown', 'value'),
         Output('gen-trc-checklist', 'value', allow_duplicate=True),
         Output('lookup-type-dropdown', 'value'),
-        Output('include-individual-bags-check', 'value', allow_duplicate=True)
+        Output('include-individual-bags-check', 'value', allow_duplicate=True),
+        Output('target-lot-item-dropdown', 'value')
     ],
     [Input('clear-button', 'n_clicks')],
     prevent_initial_call=True
 )
 def clear_filters(n_clicks):
     if n_clicks:
-        return None, None, [], [], [], None, None, [], None, []
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, None, [], [], [], None, None, [], None, [], None
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True, port=8051)
