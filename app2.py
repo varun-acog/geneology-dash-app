@@ -18,6 +18,7 @@ def csv_to_hierarchy_by_level(csv_data):
     for _, row in csv_data.iterrows():
         root_pn = row['root']
         root_itemcode = row.get('root_itemcode', '')
+        root_parentlot = row.get('root_parentlot', '')
         product_pn = row['source']
         ingredient_pn = row['ingredient']
         try:
@@ -30,7 +31,7 @@ def csv_to_hierarchy_by_level(csv_data):
         
         if root_pn not in node_info:
             node_info[root_pn] = {
-                "name": root_itemcode if root_itemcode else root_pn,
+                "name": root_parentlot if root_parentlot else root_pn,
                 "description": root_desc,
                 "level": 0,
                 "type": "root"
@@ -561,6 +562,7 @@ def update_tree_chart(data):
     hierarchy_data = pd.DataFrame({
         'root': filtered_df['ParentPN'],
         'root_itemcode': filtered_df['ParentItemCode'],
+        'root_parentlot': filtered_df['ParentPN'],
         'source': filtered_df['ProductPN'],
         'ingredient': filtered_df['IngredientPN'],
         'root desc': filtered_df['ParentName'],
