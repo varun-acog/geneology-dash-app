@@ -258,13 +258,21 @@ app.layout = html.Div([
     dcc.Download(id="download-filtered-data"),
     dcc.Store(id="all-data-store"),
     dcc.Store(id="filtered-data-store"),
+
+    # Header
     html.Div([
+        html.H1("Welcome to Genie/Tracie", style=styles['headerText'])
+    ], style=styles['header']),
+
+    # Main Body
+    html.Div([
+        # Row: Left Side (Query Builder) + Right Side (Additional Filters + Data Required)
         html.Div([
-            html.H1("Genealogy App", style=styles['headerText'])
-        ], style=styles['header']),
-        html.Div([
+            # LEFT SIDE: Query Builder Section
             html.Div([
-                html.H4("Filters", style=styles['sectionTitle']),
+                html.H4("Query Builder", style=styles['sectionTitle']),
+                
+                # What are you looking for? - Large Dropdown
                 html.Div([
                     dcc.Dropdown(
                         id='lookup-type-dropdown',
@@ -277,151 +285,169 @@ app.layout = html.Div([
                         multi=False,
                         clearable=True,
                         placeholder='What are you looking for?',
-                        style=styles['dropdown']
+                        style={**styles['dropdown'], 'height': '44px', 'fontSize': '15px'}
                     )
-                ], style={'marginBottom': '15px'}),
+                ], style={'marginBottom': '20px'}),
+
+                # Row: Select Item/Product Codes + Checkboxes
                 html.Div([
-                    dcc.Dropdown(
-                        id='product-codes-dropdown',
-                        multi=False,
-                        clearable=True,
-                        placeholder='Select Product Code',
-                        style=styles['dropdown']
-                    )
+                    # Left Half: Two Dropdowns
+                    html.Div([
+                        dcc.Dropdown(
+                            id='item-codes-dropdown',
+                            multi=True,
+                            clearable=False,
+                            placeholder='Lot/Item*',
+                            style=styles['dropdown']
+                        ),
+                        dcc.Dropdown(
+                            id='product-codes-dropdown',
+                            multi=False,
+                            clearable=True,
+                            placeholder='Select Item Code',
+                            style=styles['dropdown']
+                        )
+                    ], style={'width': '58%', 'display': 'inline-block', 'verticalAlign': 'top'}),
+
+                    # Right Half: Genealogy / Traceability checkboxes
+                    html.Div([
+                        dcc.Checklist(
+                            id='gen-trc-checklist',
+                            options=[
+                                {'label': 'Genealogy', 'value': 'gen'},
+                                {'label': 'Traceability', 'value': 'trc'}
+                            ],
+                            value=[],
+                            labelStyle={**styles['checkboxLabel'], 'display': 'block', 'margin': '5px 0'},
+                            inputStyle=styles['checkbox']
+                        )
+                    ], style={'width': '37%', 'display': 'inline-block', 'verticalAlign': 'top', 'marginLeft': '5%'})
                 ], style={'marginBottom': '15px'}),
+
+                # Include Individual Bags checkbox
                 html.Div([
-                    dcc.Dropdown(
-                        id='item-codes-dropdown',
-                        multi=True,
-                        clearable=False,
-                        placeholder='Select Item Codes',
-                        style=styles['dropdown']
-                    )
-                ], style={'marginBottom': '15px'}),
-                html.Div([
-                    dcc.Checklist(
-                        id='gen-trc-checklist',
-                        options=[
-                            {'label': 'Genealogy', 'value': 'gen'},
-                            {'label': 'Traceability', 'value': 'trc'}
-                        ],
-                        value=[],
-                        labelStyle={**styles['checkboxLabel'], 'margin': '5px'},
-                        inputStyle=styles['checkbox']
-                    ),
                     dcc.Checklist(
                         id='include-individual-bags-check',
                         options=[{'label': 'Include Individual Bags', 'value': 'individual_bags'}],
                         value=[],
                         labelStyle={**styles['checkboxLabel'], 'margin': '5px'},
-                        inputStyle=styles['checkbox'],
-                        style={'marginTop': '10px'}
+                        inputStyle=styles['checkbox']
                     )
                 ], style={'marginBottom': '15px'}),
+
+                # Submit & Clear Buttons
                 html.Div([
                     html.Button("Submit", id="submit-button", style=styles['exportButton']),
                     html.Button("Clear", id="clear-button", style=styles['clearButton'])
-                ], style={'textAlign': 'right', 'marginBottom': '10px'}),
-            ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px'}),
+                ], style={'textAlign': 'right'})
+
+            ], style={'width': '49%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '10px'}),
+
+
+            # RIGHT SIDE: Additional Filters + Data Required
             html.Div([
-                html.Div([
-                    html.H4("Data Required", style=styles['sectionTitle']),
-                    html.Div([
-                        dcc.Checklist(
-                            id='data-required-check',
-                            options=[
-                                {'label': 'PI', 'value': 'pi'},
-                                {'label': 'DISCO', 'value': 'disco'},
-                                {'label': 'SAP', 'value': 'sap'},
-                                {'label': 'LIMS', 'value': 'lims'},
-                                {'label': 'MES', 'value': 'mes'},
-                                {'label': 'EBS', 'value': 'ebs'}
-                            ],
-                            value=[],
-                            labelStyle={**styles['checkboxLabel'], 'margin': '5px'},
-                            inputStyle=styles['checkbox']
-                        )
-                    ])
-                ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '4%'}),
+                # Additional Filters
                 html.Div([
                     html.H4("Additional Filters", style=styles['sectionTitle']),
-                    html.Div([
-                        dcc.Dropdown(
-                            id='unit-operation-dropdown',
-                            multi=True,
-                            clearable=True,
-                            placeholder='Unit Operation',
-                            style=styles['dropdown']
-                        ),
-                        dcc.Dropdown(
-                            id='attribute-dropdown',
-                            multi=True,
-                            clearable=True,
-                            placeholder='Attribute',
-                            style=styles['dropdown'],
-                            options=[]
-                        )
-                    ])
-                ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'})
-            ], style={'width': '65%', 'display': 'inline-block', 'verticalAlign': 'top'})
-        ], style=styles['section']),
+                    dcc.Dropdown(
+                        id='unit-operation-dropdown',
+                        multi=True,
+                        clearable=True,
+                        placeholder='Unit Operation',
+                        style=styles['dropdown']
+                    ),
+                    dcc.Dropdown(
+                        id='attribute-dropdown',
+                        multi=True,
+                        clearable=True,
+                        placeholder='Attribute',
+                        style=styles['dropdown'],
+                        options=[]
+                    )
+                ], style={'marginBottom': '20px'}),
+
+                # Data Required
+                html.Div([
+                    html.H4("Data Required", style=styles['sectionTitle']),
+                    dcc.Checklist(
+                        id='data-required-check',
+                        options=[
+                            {'label': 'PI', 'value': 'pi'},
+                            {'label': 'DISCO', 'value': 'disco'},
+                            {'label': 'SAP', 'value': 'sap'},
+                            {'label': 'LIMS', 'value': 'lims'},
+                            {'label': 'MES', 'value': 'mes'},
+                            {'label': 'EBS', 'value': 'ebs'}
+                        ],
+                        value=[],
+                        labelStyle={**styles['checkboxLabel'], 'margin': '5px'},
+                        inputStyle=styles['checkbox']
+                    )
+                ])
+
+            ], style={'width': '49%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingLeft': '10px'})
+
+        ], style={'marginBottom': '20px'}),
+
+
+        # Tabs: Data & Visualization
         html.Div([
             dcc.Tabs(id="tabs", value='data-tab', children=[
                 dcc.Tab(label='Data', value='data-tab', style=styles['tab'], selected_style={**styles['tab'], **styles['tabSelected']}),
                 dcc.Tab(label='Visualization', value='visualization-tab', style=styles['tab'], selected_style={**styles['tab'], **styles['tabSelected']}),
             ]),
             html.Div(id='tabs-content', children=[
+                # Data Tab Content
                 html.Div(id='data-tab-content', children=[
+                    html.H4("Data", style=styles['sectionTitle']),
                     html.Div([
-                        html.H4("Data", style=styles['sectionTitle']),
-                        html.Div([
-                            html.Div([
-                                html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'marginBottom': '10px', 'width': 'auto'}),
-                                html.Button("Export with Required Data", id="export-filtered-button", style={**styles['primaryButton'], 'width': 'auto'})
-                            ], style={'textAlign': 'right', 'marginBottom': '10px'})
-                        ]),
-                        dcc.Loading(
-                            id="loading-data-table",
-                            type="default",
-                            children=[
-                                dag.AgGrid(
-                                    id='data-table',
-                                    columnDefs=columnDefs,
-                                    rowData=[],
-                                    defaultColDef=defaultColDef,
-                                    style={'height': '600px', 'width': '100%'},
-                                    dashGridOptions={
-                                        "pagination": True,
-                                        "paginationPageSize": 20,
-                                        "suppressExcelExport": False,
-                                        "suppressCsvExport": False,
-                                    },
-                                    className="ag-theme-alpine",
-                                    enableEnterpriseModules=False
-                                )
-                            ]
-                        )
-                    ], style={'width': '100%', 'display': 'inline-block', 'paddingRight': '0'})
-                ]),
-                html.Div(id='visualization-tab-content', children=[
-                    html.H4("Visualization", style=styles['sectionTitle']),
-                    html.Div([
-                        html.Button("Export", id="export-visualization-button", style=styles['exportButton'], disabled=True)
+                        html.Button("Export Genealogy", id="export-genealogy-button", style={**styles['primaryButton'], 'marginBottom': '10px', 'width': 'auto'}),
+                        html.Button("Export with Required Data", id="export-filtered-button", style={**styles['primaryButton'], 'width': 'auto'})
                     ], style={'textAlign': 'right', 'marginBottom': '10px'}),
                     dcc.Loading(
-                        id="loading-tree-chart",
+                        id="loading-data-table",
                         type="default",
                         children=[
-                            DashECharts(
-                                id='tree-chart',
-                                option={},
-                                style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+                            dag.AgGrid(
+                                id='data-table',
+                                columnDefs=columnDefs,
+                                rowData=[],
+                                defaultColDef=defaultColDef,
+                                style={'height': '600px', 'width': '100%'},
+                                dashGridOptions={
+                                    "pagination": True,
+                                    "paginationPageSize": 20,
+                                    "suppressExcelExport": False,
+                                    "suppressCsvExport": False,
+                                },
+                                className="ag-theme-alpine",
+                                enableEnterpriseModules=False
                             )
                         ]
                     )
-                ])
-            ], style=styles['section'])
+                ], style={'width': '100%'})
+            ]),
+
+            # Visualization Tab Content
+            html.Div(id='visualization-tab-content', children=[
+                html.H4("Visualization", style=styles['sectionTitle']),
+                html.Div([
+                    html.Button("Export", id="export-visualization-button", style=styles['exportButton'], disabled=True)
+                ], style={'textAlign': 'right', 'marginBottom': '10px'}),
+                dcc.Loading(
+                    id="loading-tree-chart",
+                    type="default",
+                    children=[
+                        DashECharts(
+                            id='tree-chart',
+                            option={},
+                            style={'height': '500px', 'border': '1px solid #ecf0f1', 'borderRadius': '4px'}
+                        )
+                    ]
+                )
+            ])
         ], style=styles['section'])
+
     ], style=styles['container'])
 ])
 
