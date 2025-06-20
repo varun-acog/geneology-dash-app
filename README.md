@@ -12,10 +12,7 @@ Where the Lot got Used/Consumed(when this is selected, only Traceability check b
 Where Used(Put it as it is for now no functionality)
 
 
-Duplicate callback outputs
-5:44:04 PM
-In the callback for output(s): filtered-data-store.data Output 0 (filtered-data-store.data) is already in use. To resolve this, set `allow_duplicate=True` on duplicate outputs, or combine the outputs into one callback function, distinguishing the trigger by using `dash.callback_context` if necessary.
-Duplicate callback outputs
-5:44:04 PM
-In the callback for output(s): product-codes-dropdown.value item-codes-dropdown.value unit-operation-dropdown.value attribute-dropdown.value gen-trc-checklist.value lookup-type-dropdown.value include-individual-bags-check.value target-lot-item-dropdown.value filter-dropdown-ParentItemCode.value filter-dropdown-ParentName.value filter-dropdown-ParentPN.value filter-dropdown-Level.value filter-dropdown-ProductItemCode.value filter-dropdown-ProductName.value filter-dropdown-ProductPN.value filter-dropdown-IngredientItemCode.value filter-dropdown-IngredientName.value filter-dropdown-IngredientPN.value filter-dropdown-CntRecs.value Output 4 (gen-trc-checklist.value) is already in use. To resolve this, set `allow_duplicate=True` on duplicate outputs, or combine the outputs into one callback function, distinguishing the trigger by using `dash.callback_context` if necessary.
-   
+  File "/home/users/pr912591/Lineage/Lineage/app.py", line 230
+    'borderRadius': '4px 4px 0 the same time, use `dash.callback_context` to determine which input triggered the callback and handle each case appropriately. Below is the updated `app.py` with these changes.
+                    ^
+SyntaxError: unterminated string literal (detected at line 230)
